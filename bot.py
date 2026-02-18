@@ -12,10 +12,9 @@ import os
 
 # ================= CONFIG =================
 
-DISCORD_TOKEN = "your_token_here"
-YOUTUBE_API_KEY = "your_key_here"
-CHANNEL_ID = "UCA5BfytqBCeMitzfGPo2dTA"
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+CHANNEL_ID = "UCA5BfytqBCeMitzfGPo2dTA"
 COVER_CHANNEL_ID = 1451693094859968512
 LIVE_CHANNEL_ID = 1451693118012264610
 
@@ -338,3 +337,4 @@ async def on_ready():
 # ================= RUN =================
 
 bot.run(DISCORD_TOKEN)
+
