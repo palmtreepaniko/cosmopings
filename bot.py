@@ -241,7 +241,7 @@ async def check_youtube():
                         )
                     else:
                         message = (
-                            f"📅 MIRA will be 🔴 LIVE {date_str}, which is <t:{unix_ts}:R>! Don't miss it!~\n"
+                            f"📅 MIRA will be 🔴 LIVE on {date_str}, which is <t:{unix_ts}:R>! Don't miss it!~\n"
                             f"{video_url}"
                         )
                     await channel.send(message)
@@ -337,5 +337,6 @@ async def on_ready():
 # ================= RUN =================
 
 bot.run(DISCORD_TOKEN)
+
 
 
