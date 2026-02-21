@@ -100,7 +100,6 @@ def get_latest_videos():
     return [item["snippet"]["resourceId"]["videoId"] for item in response["items"]]
 
 def get_upcoming_videos_api():
-    """Costs 100 quota units — only called every 30 minutes"""
     try:
         request = youtube.search().list(
             part="snippet",
@@ -117,7 +116,6 @@ def get_upcoming_videos_api():
         return []
 
 def get_upcoming_videos_rss():
-    """Free — no quota cost, called every cycle"""
     try:
         url = f"https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}"
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -241,7 +239,7 @@ async def check_youtube():
                         )
                     else:
                         message = (
-                            f"📅 MIRA will be 🔴 LIVE on {date_str}, which is <t:{unix_ts}:R>! Don't miss it!~\n"
+                            f"📅 MIRA will be 🔴 LIVE on {date_str} (GMT), which is <t:{unix_ts}:R>! Don't miss it!~\n"
                             f"{video_url}"
                         )
                     await channel.send(message)
@@ -337,6 +335,7 @@ async def on_ready():
 # ================= RUN =================
 
 bot.run(DISCORD_TOKEN)
+
 
 
 
