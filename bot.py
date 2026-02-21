@@ -221,12 +221,12 @@ async def check_youtube():
                 if datetime.now(timezone.utc) >= dt_utc and live_broadcast_content == "none":
                     if content_type == "cover":
                         message = (
-                            f"🎵 Mira just dropped a new cover! Go give it a listen~ 🎧\n"
+                            f"🎵 MIRA just dropped a new cover! Go give it a listen~ 🎧\n"
                             f"{video_url}"
                         )
                     else:
                         message = (
-                            f"🔴 Mira is live right now! Come join her~ 👾\n"
+                            f"🔴 MIRA is live right now! Come join her~ 👾\n"
                             f"{video_url}"
                         )
                     await channel.send(message)
@@ -259,12 +259,12 @@ async def check_youtube():
             elif not scheduled_time and live_broadcast_content == "none":
                 if content_type == "cover":
                     message = (
-                        f"Mira just dropped a new cover! Go give it a listen~ 🎧\n"
+                        f"MIRA just dropped a new cover! Go give it a listen~ 🎧\n"
                         f"{video_url}"
                     )
                 else:
                     message = (
-                        f"🔴 Mira is live right now! Come join her~ 👾\n"
+                        f"🔴 MIRA is live right now! Come join her~ 👾\n"
                         f"{video_url}"
                     )
                 await channel.send(message)
@@ -302,12 +302,12 @@ async def check_scheduled_start():
                 if channel:
                     if content_type == "cover":
                         await channel.send(
-                            f"🎵 Mira is premiering a new cover RIGHT NOW! Go give it a listen~ 🎧\n"
+                            f"🎵 MIRA is premiering a new cover RIGHT NOW! Go give it a listen~ 🎧\n"
                             f"https://www.youtube.com/watch?v={video_id}"
                         )
                     else:
                         await channel.send(
-                            f"🔴 Mira is LIVE right now! Come join her~ 👾\n"
+                            f"🔴 MIRA is LIVE right now! Come join her~ 👾\n"
                             f"https://www.youtube.com/watch?v={video_id}"
                         )
                     print(f"START notification sent for {video_id}")
@@ -337,4 +337,5 @@ async def on_ready():
 # ================= RUN =================
 
 bot.run(DISCORD_TOKEN)
+
 
