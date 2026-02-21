@@ -1,4 +1,4 @@
-🎵 Cosmopings
+***Cosmopings Bot***
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![discord.py](https://img.shields.io/badge/discord.py-2.x-5865F2.svg)](https://discordpy.readthedocs.io/)
@@ -7,10 +7,10 @@
 
 A production-ready Discord bot that monitors a YouTube channel and automatically posts notifications for:
 
-* 🎵 New cover uploads
-* 🔴 Livestreams
-* 📅 Scheduled premieres & upcoming streams
-* ⏰ “Starting Now” alerts
+*  New cover uploads
+*  Livestreams
+*  Scheduled premieres & upcoming streams
+*  “Starting Now” alerts
 
 Designed to be lightweight, reliable, and safe for deployment (Railway, VPS, etc.).
 
