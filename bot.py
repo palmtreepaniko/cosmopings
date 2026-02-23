@@ -193,7 +193,11 @@ async def check_youtube():
                 scheduled_ids.add(video_id)
 
             elif not scheduled_time and live_broadcast_content == "none":
-                message = f"🎵 MIRA just dropped a new cover! Go check it out~\n{video_url}" if content_type == "cover" else f"🔴 MIRA is live right now! Come join her~\n{video_url}"
+                if content_type == "live":
+                    print(f"Skipping VOD detected as live for {video_id}")
+                    posted.append(video_id)
+                    continue
+                message = f"🎵 MIRA just dropped a new cover! Go check it out~\n{video_url}"
                 await channel.send(message)
                 posted.append(video_id)
                 print(f"Immediate upload notification sent for {video_id}")
@@ -258,3 +262,4 @@ async def on_ready():
     check_scheduled_start.start()
 
 bot.run(DISCORD_TOKEN)
+
