@@ -7,7 +7,6 @@ import os
 import xml.etree.ElementTree as ET
 import urllib.request
 
-# ================= CONFIG =================
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 CHANNEL_ID = "UCA5BfytqBCeMitzfGPo2dTA"
@@ -15,8 +14,8 @@ CHANNEL_ID = "UCA5BfytqBCeMitzfGPo2dTA"
 COVER_CHANNEL_ID = 1451693094859968512
 LIVE_CHANNEL_ID = 1451693118012264610
 
-CHECK_INTERVAL = 300  # 5 minutes
-UPCOMING_CHECK_EVERY = 6  # cycles
+CHECK_INTERVAL = 300  
+UPCOMING_CHECK_EVERY = 6  
 
 COVER_KEYWORDS = ["cover"]
 LIVE_KEYWORDS = ["live", "stream", "livestream"]
@@ -24,7 +23,6 @@ LIVE_KEYWORDS = ["live", "stream", "livestream"]
 COVER_HASHTAGS = ["#miracle_melody"]
 LIVE_HASHTAGS = ["#miracle_live"]
 
-# ==========================================
 intents = discord.Intents.default()
 intents.guilds = True
 intents.messages = True
@@ -34,7 +32,6 @@ youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 cycle_count = 0
 uploads_playlist_id = None
 
-# ---------------- JSON ----------------
 def load_json(file):
     if not os.path.exists(file):
         with open(file, "w") as f:
@@ -46,7 +43,6 @@ def save_json(file, data):
     with open(file, "w") as f:
         json.dump(data, f, indent=4)
 
-# ---------------- YOUTUBE ----------------
 def detect_type(title, description, live_status):
     title_lower = title.lower()
     desc_lower = description.lower()
@@ -258,3 +254,4 @@ async def on_ready():
     check_scheduled_start.start()
 
 bot.run(DISCORD_TOKEN)
+
