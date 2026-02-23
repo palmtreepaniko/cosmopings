@@ -27,6 +27,7 @@ LIVE_HASHTAGS = ["#miracle_live"]
 intents = discord.Intents.default()
 intents.guilds = True
 intents.messages = True
+intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 cycle_count = 0
@@ -312,4 +313,5 @@ async def on_ready():
     check_scheduled_start.start()
 
 bot.run(DISCORD_TOKEN)
+
 
