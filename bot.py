@@ -27,7 +27,6 @@ LIVE_HASHTAGS = ["#miracle_live"]
 intents = discord.Intents.default()
 intents.guilds = True
 intents.messages = True
-intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 cycle_count = 0
@@ -128,35 +127,6 @@ def get_video_details(video_id):
         return None
     return response["items"][0]
     
-@bot.command(name="clear")
-@commands.has_permissions(manage_messages=True)
-async def clear_user(ctx, member: discord.Member):
-    deleted = 0
-
-    for channel in ctx.guild.text_channels:
-        try:
-            def is_target(m):
-                return m.author == member
-
-            removed = await channel.purge(limit=200, check=is_target)
-            deleted += len(removed)
-        except discord.Forbidden:
-            pass
-        except Exception as e:
-            print(f"Error clearing messages in #{channel.name}: {e}")
-
-    confirm = await ctx.send(f"✅ Deleted **{deleted}** messages from {member.mention}.")
-    await confirm.delete(delay=5)
-
-@clear_user.error
-async def clear_user_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("❌ You don't have permission to use this command.", delete_after=5)
-    elif isinstance(error, commands.MemberNotFound):
-        await ctx.send("❌ User not found. Please mention a valid member.", delete_after=5)
-    else:
-        await ctx.send(f"❌ An error occurred: {error}", delete_after=5)
-        
 @tasks.loop(seconds=CHECK_INTERVAL)
 async def check_youtube():
     global cycle_count
@@ -313,5 +283,6 @@ async def on_ready():
     check_scheduled_start.start()
 
 bot.run(DISCORD_TOKEN)
+
 
 
