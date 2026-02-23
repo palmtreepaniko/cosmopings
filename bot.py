@@ -172,14 +172,20 @@ async def check_youtube():
 
             if scheduled_time and video_id not in scheduled_ids:
                 dt_utc = datetime.strptime(scheduled_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+
+                if datetime.now(timezone.utc) >= dt_utc:
+                    print(f"Skipping already-passed scheduled video {video_id}")
+                    posted.append(video_id)
+                    continue
+
                 unix_ts = int(dt_utc.timestamp())
                 date_str = dt_utc.strftime('%d/%m/%Y %H:%M')
 
                 message = (
-                        f"🎵 MIRA is premiering a new cover on {date_str}, which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
-                        if content_type == 'cover'
-                        else f"MIRA will be 🔴 LIVE on {date_str} (GMT), which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
-                    )
+                    f"🎵 MIRA is premiering a new cover on {date_str}, which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
+                    if content_type == 'cover'
+                    else f"MIRA will be 🔴 LIVE on {date_str} (GMT), which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
+                )
                 await channel.send(message)
                 print(f"Scheduled notification sent for {video_id}")
 
@@ -188,19 +194,27 @@ async def check_youtube():
                     "time": scheduled_time,
                     "type": content_type,
                     "channel_id": channel_id,
-                    "notified": False 
+                    "notified": False
                 })
                 scheduled_ids.add(video_id)
 
             elif not scheduled_time and live_broadcast_content == "none":
                 if content_type == "live":
-                    print(f"Skipping VOD detected as live for {video_id}")
+                    print(f"Skipping past VOD detected as live for {video_id}")
                     posted.append(video_id)
                     continue
+
                 message = f"🎵 MIRA just dropped a new cover! Go check it out~\n{video_url}"
                 await channel.send(message)
                 posted.append(video_id)
                 print(f"Immediate upload notification sent for {video_id}")
+
+            elif live_broadcast_content == "live" and video_id not in scheduled_ids:
+                # Active live stream that was never scheduled (went live without warning)
+                message = f"🔴 MIRA is live right now! Come join her~\n{video_url}"
+                await channel.send(message)
+                posted.append(video_id)
+                print(f"Unscheduled live notification sent for {video_id}")
 
         save_json("posted.json", posted)
         save_json("scheduled.json", scheduled)
@@ -228,7 +242,6 @@ async def check_scheduled_start():
                 live_status = data["snippet"].get("liveBroadcastContent", "none") if data else "none"
 
                 if live_status not in ("live", "upcoming"):
-                    
                     print(f"Skipping stale notification for {video_id} (already ended)")
                 else:
                     channel = bot.get_channel(channel_id)
@@ -242,9 +255,17 @@ async def check_scheduled_start():
                         print(f"START notification sent for {video_id}")
 
                 item["notified"] = True
-                posted.append(video_id)
+                if video_id not in posted:
+                    posted.append(video_id)
 
             updated_scheduled.append(item)
+
+        cutoff = datetime.now(timezone.utc).timestamp() - (2 * 24 * 60 * 60)
+        updated_scheduled = [
+            item for item in updated_scheduled
+            if not item.get("notified", False) or
+            datetime.strptime(item["time"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp() > cutoff
+        ]
 
         save_json("scheduled.json", updated_scheduled)
         save_json("posted.json", posted)
@@ -262,4 +283,3 @@ async def on_ready():
     check_scheduled_start.start()
 
 bot.run(DISCORD_TOKEN)
-
