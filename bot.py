@@ -6,9 +6,7 @@ import json
 import os
 import xml.etree.ElementTree as ET
 import urllib.request
-
 import os
-
 
 # ================= CONFIG =================
 
@@ -22,9 +20,9 @@ CHECK_INTERVAL = 300
 UPCOMING_CHECK_EVERY = 6   
 
 
-COVER_KEYWORDS = ["cover", "covered", "歌ってみた", "歌わせていただきました"]
+COVER_KEYWORDS = ["cover"]
 
-LIVE_KEYWORDS = ["live", "stream", "配信", "雑談", "singing", "karaoke"]
+LIVE_KEYWORDS = ["live", "stream", "livestream"]
 
 COVER_HASHTAGS = ["#miracle_melody", "#cover"]
 LIVE_HASHTAGS = ["#miracle_live", "#live", "#stream"]
@@ -335,6 +333,7 @@ async def on_ready():
 # ================= RUN =================
 
 bot.run(DISCORD_TOKEN)
+
 
 
 
