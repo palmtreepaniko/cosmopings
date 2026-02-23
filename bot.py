@@ -8,7 +8,6 @@ import xml.etree.ElementTree as ET
 import urllib.request
 import os
 
-# ================= CONFIG =================
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
@@ -19,26 +18,20 @@ LIVE_CHANNEL_ID = 1451693118012264610
 CHECK_INTERVAL = 300       
 UPCOMING_CHECK_EVERY = 6   
 
-
 COVER_KEYWORDS = ["cover"]
-
 LIVE_KEYWORDS = ["live", "stream", "livestream"]
 
-COVER_HASHTAGS = ["#miracle_melody", "#cover"]
-LIVE_HASHTAGS = ["#miracle_live", "#live", "#stream"]
+COVER_HASHTAGS = ["#miracle_melody"]
+LIVE_HASHTAGS = ["#miracle_live"]
 
-# ==========================================
 
 intents = discord.Intents.default()
 intents.guilds = True
 intents.messages = True
 bot = commands.Bot(command_prefix="!", intents=intents)
-
 youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
-
 cycle_count = 0
 
-# ================= JSON =================
 
 def load_json(file):
     if not os.path.exists(file):
@@ -51,7 +44,6 @@ def save_json(file, data):
     with open(file, "w") as f:
         json.dump(data, f, indent=4)
 
-# ================= DETECTION =================
 
 def detect_type(title, description, live_broadcast_content):
     title_lower = title.lower()
@@ -76,7 +68,6 @@ def detect_type(title, description, live_broadcast_content):
 
     return None
 
-# ================= YOUTUBE =================
 
 uploads_playlist_id = None
 
@@ -141,7 +132,6 @@ def get_video_details(video_id):
         return None
     return response["items"][0]
 
-# ================= MAIN CHECK =================
 
 @tasks.loop(seconds=CHECK_INTERVAL)
 async def check_youtube():
@@ -208,7 +198,6 @@ async def check_youtube():
 
             video_url = f"https://www.youtube.com/watch?v={video_id}"
 
-            # ===== SCHEDULED / UPCOMING =====
             if scheduled_time and video_id not in scheduled_ids:
                 dt_utc = datetime.strptime(scheduled_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
                 unix_ts = int(dt_utc.timestamp())
@@ -251,7 +240,6 @@ async def check_youtube():
                     })
                     scheduled_ids.add(video_id)
 
-            # ===== NORMAL UPLOAD =====
             elif not scheduled_time and live_broadcast_content == "none":
                 if content_type == "cover":
                     message = (
@@ -276,7 +264,6 @@ async def check_youtube():
     except Exception as e:
         print(f"Error in check_youtube: {e}")
 
-# ================= SCHEDULED START CHECK =================
 
 @tasks.loop(seconds=60)
 async def check_scheduled_start():
@@ -319,7 +306,6 @@ async def check_scheduled_start():
     except Exception as e:
         print(f"Error in check_scheduled_start: {e}")
 
-# ================= READY =================
 
 @bot.event
 async def on_ready():
@@ -330,9 +316,9 @@ async def on_ready():
     check_youtube.start()
     check_scheduled_start.start()
 
-# ================= RUN =================
 
 bot.run(DISCORD_TOKEN)
+
 
 
 
