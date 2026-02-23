@@ -220,11 +220,23 @@ async def check_scheduled_start():
             notified = item.get("notified", False)
 
             if not notified and datetime.now(timezone.utc) >= dt_utc:
-                channel = bot.get_channel(channel_id)
-                if channel:
-                    message = f"🎵 MIRA just dropped a new {content_type}! Go check it out~\n https://www.youtube.com/watch?v={video_id}" if content_type == "cover" else f"🔴 MIRA is live right now! Come join her~\n https://www.youtube.com/watch?v={video_id}"
-                    await channel.send(message)
-                    print(f"START notification sent for {video_id}")
+                data = get_video_details(video_id)
+                live_status = data["snippet"].get("liveBroadcastContent", "none") if data else "none"
+
+                if live_status not in ("live", "upcoming"):
+                    
+                    print(f"Skipping stale notification for {video_id} (already ended)")
+                else:
+                    channel = bot.get_channel(channel_id)
+                    if channel:
+                        message = (
+                            f"🎵 MIRA just dropped a new cover! Go check it out~\n https://www.youtube.com/watch?v={video_id}"
+                            if content_type == "cover"
+                            else f"🔴 MIRA is live right now! Come join her~\n https://www.youtube.com/watch?v={video_id}"
+                        )
+                        await channel.send(message)
+                        print(f"START notification sent for {video_id}")
+
                 item["notified"] = True
                 posted.append(video_id)
 
