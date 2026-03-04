@@ -182,7 +182,7 @@ async def check_youtube():
                 date_str = dt_utc.strftime('%d/%m/%Y %H:%M')
 
                 message = (
-                    f"🎵 MIRA is premiering a new cover on {date_str}, which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
+                    f"🎵 MIRA is premiering a new cover on {date_str} (GMT), which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
                     if content_type == 'cover'
                     else f"MIRA will be 🔴 LIVE on {date_str} (GMT), which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
                 )
@@ -283,6 +283,7 @@ async def on_ready():
     check_scheduled_start.start()
 
 bot.run(DISCORD_TOKEN)
+
 
 
 
