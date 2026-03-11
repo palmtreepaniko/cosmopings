@@ -307,3 +307,5 @@ async def on_ready():
     check_scheduled_start.start()
 
 bot.run(DISCORD_TOKEN)
+
+#tesra9 l code nikek
