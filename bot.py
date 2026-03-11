@@ -290,11 +290,11 @@ async def on_ready():
         pending = [item for item in scheduled if not item.get("notified", False)]
 
         if pending:
-            msg = "🔄 Bot restarted! These streams were announced and are still pending:\n"
+            msg = "Bot restarted! These streams were announced and are still pending:\n"
             for item in pending:
                 msg += f"- https://www.youtube.com/watch?v={item['video_id']} (scheduled: {item['time']})\n"
         else:
-            msg = "🔄 Bot restarted! No pending scheduled streams."
+            msg = "Bot restarted! No pending scheduled streams."
 
         await log_channel.send(msg)
 
@@ -302,3 +302,4 @@ async def on_ready():
     check_scheduled_start.start()
 
 bot.run(DISCORD_TOKEN)
+
