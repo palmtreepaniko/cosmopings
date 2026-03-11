@@ -14,6 +14,7 @@ CHANNEL_ID = "UCA5BfytqBCeMitzfGPo2dTA"
 
 COVER_CHANNEL_ID = 1451693094859968512
 LIVE_CHANNEL_ID = 1451693118012264610
+LOG_CHANNEL_ID = 1481394599493763162
 
 CHECK_INTERVAL = 300      
 UPCOMING_CHECK_EVERY = 6   
@@ -176,6 +177,7 @@ async def check_youtube():
                 if datetime.now(timezone.utc) >= dt_utc:
                     print(f"Skipping already-passed scheduled video {video_id}")
                     posted.append(video_id)
+                    save_json("posted.json", posted)
                     continue
 
                 unix_ts = int(dt_utc.timestamp())
@@ -197,27 +199,27 @@ async def check_youtube():
                     "notified": False
                 })
                 scheduled_ids.add(video_id)
+                save_json("scheduled.json", scheduled)  
 
             elif not scheduled_time and live_broadcast_content == "none":
                 if content_type == "live":
                     print(f"Skipping past VOD detected as live for {video_id}")
                     posted.append(video_id)
+                    save_json("posted.json", posted)  
                     continue
 
                 message = f"🎵 MIRA just dropped a new cover! Go check it out~\n{video_url}"
                 await channel.send(message)
                 posted.append(video_id)
+                save_json("posted.json", posted)  
                 print(f"Immediate upload notification sent for {video_id}")
 
             elif live_broadcast_content == "live" and video_id not in scheduled_ids:
-                # Active live stream that was never scheduled (went live without warning)
                 message = f"🔴 MIRA is live right now! Come join her~\n{video_url}"
                 await channel.send(message)
                 posted.append(video_id)
+                save_json("posted.json", posted) 
                 print(f"Unscheduled live notification sent for {video_id}")
-
-        save_json("posted.json", posted)
-        save_json("scheduled.json", scheduled)
 
     except Exception as e:
         print(f"Error in check_youtube: {e}")
@@ -257,6 +259,8 @@ async def check_scheduled_start():
                 item["notified"] = True
                 if video_id not in posted:
                     posted.append(video_id)
+                    save_json("posted.json", posted)  
+                save_json("scheduled.json", scheduled) 
 
             updated_scheduled.append(item)
 
@@ -268,10 +272,10 @@ async def check_scheduled_start():
         ]
 
         save_json("scheduled.json", updated_scheduled)
-        save_json("posted.json", posted)
 
     except Exception as e:
         print(f"Error in check_scheduled_start: {e}")
+
 
 @bot.event
 async def on_ready():
@@ -279,11 +283,22 @@ async def on_ready():
     print(f"Logged in as {bot.user}")
     uploads_playlist_id = get_uploads_playlist()
     print(f"Uploads playlist ID: {uploads_playlist_id}")
+
+    log_channel = bot.get_channel(LOG_CHANNEL_ID)
+    if log_channel:
+        scheduled = load_json("scheduled.json")
+        pending = [item for item in scheduled if not item.get("notified", False)]
+
+        if pending:
+            msg = "🔄 Bot restarted! These streams were announced and are still pending:\n"
+            for item in pending:
+                msg += f"- https://www.youtube.com/watch?v={item['video_id']} (scheduled: {item['time']})\n"
+        else:
+            msg = "🔄 Bot restarted! No pending scheduled streams."
+
+        await log_channel.send(msg)
+
     check_youtube.start()
     check_scheduled_start.start()
 
 bot.run(DISCORD_TOKEN)
-
-
-
-
