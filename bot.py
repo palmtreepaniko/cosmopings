@@ -137,7 +137,7 @@ async def check_youtube():
     try:
         posted = load_json("posted.json")
         scheduled = load_json("scheduled.json")
-        scheduled_ids = {item["video_id"] for item in scheduled}
+        announced_ids = {item["video_id"] for item in scheduled if item.get("announced", False)}
 
         latest = get_latest_videos()
         upcoming_rss = get_upcoming_videos_rss()
@@ -146,7 +146,11 @@ async def check_youtube():
         all_videos = list(set(latest + upcoming_api + upcoming_rss))
 
         for video_id in all_videos:
+
             if video_id in posted:
+                continue
+
+            if video_id in announced_ids:
                 continue
 
             data = get_video_details(video_id)
@@ -171,7 +175,7 @@ async def check_youtube():
 
             video_url = f"https://www.youtube.com/watch?v={video_id}"
 
-            if scheduled_time and video_id not in scheduled_ids:
+            if scheduled_time:
                 dt_utc = datetime.strptime(scheduled_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
 
                 if datetime.now(timezone.utc) >= dt_utc:
@@ -189,36 +193,37 @@ async def check_youtube():
                     else f"MIRA will be 🔴 LIVE on {date_str} (GMT), which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
                 )
                 await channel.send(message)
-                print(f"Scheduled notification sent for {video_id}")
+                print(f"Scheduled announcement sent for {video_id}")
 
                 scheduled.append({
                     "video_id": video_id,
                     "time": scheduled_time,
                     "type": content_type,
                     "channel_id": channel_id,
-                    "notified": False
+                    "announced": True,   
+                    "notified": False    
                 })
-                scheduled_ids.add(video_id)
-                save_json("scheduled.json", scheduled)  
+                announced_ids.add(video_id)
+                save_json("scheduled.json", scheduled)
 
             elif not scheduled_time and live_broadcast_content == "none":
                 if content_type == "live":
                     print(f"Skipping past VOD detected as live for {video_id}")
                     posted.append(video_id)
-                    save_json("posted.json", posted)  
+                    save_json("posted.json", posted)
                     continue
 
                 message = f"🎵 MIRA just dropped a new cover! Go check it out~\n{video_url}"
                 await channel.send(message)
                 posted.append(video_id)
-                save_json("posted.json", posted)  
+                save_json("posted.json", posted)
                 print(f"Immediate upload notification sent for {video_id}")
 
-            elif live_broadcast_content == "live" and video_id not in scheduled_ids:
+            elif live_broadcast_content == "live" and video_id not in announced_ids:
                 message = f"🔴 MIRA is live right now! Come join her~\n{video_url}"
                 await channel.send(message)
                 posted.append(video_id)
-                save_json("posted.json", posted) 
+                save_json("posted.json", posted)
                 print(f"Unscheduled live notification sent for {video_id}")
 
     except Exception as e:
@@ -259,8 +264,8 @@ async def check_scheduled_start():
                 item["notified"] = True
                 if video_id not in posted:
                     posted.append(video_id)
-                    save_json("posted.json", posted)  
-                save_json("scheduled.json", scheduled) 
+                    save_json("posted.json", posted)
+                save_json("scheduled.json", scheduled)
 
             updated_scheduled.append(item)
 
@@ -302,4 +307,3 @@ async def on_ready():
     check_scheduled_start.start()
 
 bot.run(DISCORD_TOKEN)
-
