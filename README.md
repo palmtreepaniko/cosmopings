@@ -46,7 +46,7 @@ Content type is determined by:
 ### Installation
 
 ```bash
-git clone hub.com/palmtreepaniko/cosmopings
+git clone https://github.com/palmtreepaniko/cosmopings
 cd cosmopings
 pip install -r requirements.txt
 ```
