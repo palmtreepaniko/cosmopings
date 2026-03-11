@@ -127,7 +127,7 @@ def get_video_details(video_id):
     if not response.get("items"):
         return None
     return response["items"][0]
-    
+
 @tasks.loop(seconds=CHECK_INTERVAL)
 async def check_youtube():
     global cycle_count
@@ -137,6 +137,7 @@ async def check_youtube():
     try:
         posted = load_json("posted.json")
         scheduled = load_json("scheduled.json")
+
         announced_ids = {item["video_id"] for item in scheduled if item.get("announced", False)}
 
         latest = get_latest_videos()
@@ -146,10 +147,10 @@ async def check_youtube():
         all_videos = list(set(latest + upcoming_api + upcoming_rss))
 
         for video_id in all_videos:
-
             if video_id in posted:
                 continue
 
+    
             if video_id in announced_ids:
                 continue
 
@@ -161,7 +162,6 @@ async def check_youtube():
             title = snippet["title"]
             description = snippet.get("description", "")
             live_broadcast_content = snippet.get("liveBroadcastContent", "none")
-
             scheduled_time = data.get("liveStreamingDetails", {}).get("scheduledStartTime")
 
             content_type = detect_type(title, description, live_broadcast_content)
@@ -200,8 +200,8 @@ async def check_youtube():
                     "time": scheduled_time,
                     "type": content_type,
                     "channel_id": channel_id,
-                    "announced": True,   
-                    "notified": False    
+                    "announced": True,
+                    "notified": False
                 })
                 announced_ids.add(video_id)
                 save_json("scheduled.json", scheduled)
@@ -230,7 +230,7 @@ async def check_youtube():
         print(f"Error in check_youtube: {e}")
 
 
-@tasks.loop(seconds=60)
+@tasks.loop(seconds=300)
 async def check_scheduled_start():
     try:
         scheduled = load_json("scheduled.json")
@@ -303,9 +303,9 @@ async def on_ready():
 
         await log_channel.send(msg)
 
-    check_youtube.start()
-    check_scheduled_start.start()
+    if not check_youtube.is_running():
+        check_youtube.start()
+    if not check_scheduled_start.is_running():
+        check_scheduled_start.start()
 
 bot.run(DISCORD_TOKEN)
-
-#tesra9 l code nikek
