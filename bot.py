@@ -220,7 +220,7 @@ async def check_youtube():
                 print(f"Immediate upload notification sent for {video_id}")
 
             elif live_broadcast_content == "live" and video_id not in announced_ids:
-                message = f"🔴 MIRA is live right now! Come join her~\n{video_url}"
+                message = f"🔴 MIRA is LIVE right now! Come join her~\n{video_url}"
                 await channel.send(message)
                 posted.append(video_id)
                 save_json("posted.json", posted)
@@ -256,7 +256,7 @@ async def check_scheduled_start():
                         message = (
                             f"🎵 MIRA just dropped a new cover! Go check it out~\n https://www.youtube.com/watch?v={video_id}"
                             if content_type == "cover"
-                            else f"🔴 MIRA is live right now! Come join her~\n https://www.youtube.com/watch?v={video_id}"
+                            else f"🔴 MIRA is LIVE right now! Come join her~\n https://www.youtube.com/watch?v={video_id}"
                         )
                         await channel.send(message)
                         print(f"START notification sent for {video_id}")
