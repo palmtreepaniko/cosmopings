@@ -4,6 +4,7 @@ from googleapiclient.discovery import build
 from datetime import datetime, timezone
 import json
 import os
+import asyncio
 import xml.etree.ElementTree as ET
 import urllib.request
 
@@ -16,8 +17,8 @@ COVER_CHANNEL_ID = 1451693094859968512
 LIVE_CHANNEL_ID = 1451693118012264610
 LOG_CHANNEL_ID = 1481394599493763162
 
-CHECK_INTERVAL = 300      
-UPCOMING_CHECK_EVERY = 6   
+CHECK_INTERVAL = 300
+UPCOMING_CHECK_EVERY = 6
 
 COVER_KEYWORDS = ["cover"]
 LIVE_KEYWORDS = ["live", "stream", "livestream"]
@@ -33,6 +34,8 @@ youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 cycle_count = 0
 uploads_playlist_id = None
 
+
+state_lock = asyncio.Lock()
 def load_json(file):
     if not os.path.exists(file):
         with open(file, "w") as f:
@@ -40,9 +43,65 @@ def load_json(file):
     with open(file, "r") as f:
         return json.load(f)
 
+
 def save_json(file, data):
     with open(file, "w") as f:
         json.dump(data, f, indent=4)
+
+
+async def mark_posted(video_id):
+    """Load posted.json fresh, add video_id if missing, save. Locked."""
+    async with state_lock:
+        posted = load_json("posted.json")
+        if video_id not in posted:
+            posted.append(video_id)
+            save_json("posted.json", posted)
+
+
+async def add_scheduled_entry(entry):
+    """Load scheduled.json fresh, append entry, save. Locked."""
+    async with state_lock:
+        scheduled = load_json("scheduled.json")
+        scheduled.append(entry)
+        save_json("scheduled.json", scheduled)
+
+
+async def mark_scheduled_notified(video_id):
+    async with state_lock:
+        scheduled = load_json("scheduled.json")
+        found = False
+        for item in scheduled:
+            if item["video_id"] == video_id and not item.get("notified", False):
+                item["notified"] = True
+                found = True
+        if found:
+            save_json("scheduled.json", scheduled)
+        return found
+
+
+async def get_announced_ids():
+    async with state_lock:
+        scheduled = load_json("scheduled.json")
+        return {item["video_id"] for item in scheduled if item.get("announced", False)}
+
+
+async def get_posted_ids():
+    async with state_lock:
+        return set(load_json("posted.json"))
+
+
+async def prune_old_scheduled():
+    async with state_lock:
+        scheduled = load_json("scheduled.json")
+        cutoff = datetime.now(timezone.utc).timestamp() - (2 * 24 * 60 * 60)
+        pruned = [
+            item for item in scheduled
+            if not item.get("notified", False)
+            or datetime.strptime(item["time"], "%Y-%m-%dT%H:%M:%SZ")
+                .replace(tzinfo=timezone.utc).timestamp() > cutoff
+        ]
+        save_json("scheduled.json", pruned)
+
 
 def detect_type(title, description, live_broadcast_content):
     title_lower = title.lower()
@@ -67,6 +126,7 @@ def detect_type(title, description, live_broadcast_content):
 
     return None
 
+
 def get_uploads_playlist():
     request = youtube.channels().list(
         part="contentDetails",
@@ -74,6 +134,7 @@ def get_uploads_playlist():
     )
     response = request.execute()
     return response["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
+
 
 def get_latest_videos():
     request = youtube.playlistItems().list(
@@ -83,6 +144,7 @@ def get_latest_videos():
     )
     response = request.execute()
     return [item["snippet"]["resourceId"]["videoId"] for item in response["items"]]
+
 
 def get_upcoming_videos_api():
     try:
@@ -99,6 +161,7 @@ def get_upcoming_videos_api():
     except Exception as e:
         print(f"    API upcoming check failed: {e}")
         return []
+
 
 def get_upcoming_videos_rss():
     try:
@@ -118,6 +181,7 @@ def get_upcoming_videos_rss():
         print(f"    RSS fetch failed: {e}")
         return []
 
+
 def get_video_details(video_id):
     request = youtube.videos().list(
         part="snippet,liveStreamingDetails",
@@ -128,6 +192,7 @@ def get_video_details(video_id):
         return None
     return response["items"][0]
 
+
 @tasks.loop(seconds=CHECK_INTERVAL)
 async def check_youtube():
     global cycle_count
@@ -135,10 +200,11 @@ async def check_youtube():
     print(f"\n===== CHECKING YOUTUBE (cycle {cycle_count}) =====")
 
     try:
-        posted = load_json("posted.json")
-        scheduled = load_json("scheduled.json")
-
-        announced_ids = {item["video_id"] for item in scheduled if item.get("announced", False)}
+        # Fresh reads for membership checks only -- these are read-only
+        # decisions made per-video-id, not carried across the whole loop
+        # and saved back wholesale, so there's no risk of clobbering.
+        posted_ids = await get_posted_ids()
+        announced_ids = await get_announced_ids()
 
         latest = get_latest_videos()
         upcoming_rss = get_upcoming_videos_rss()
@@ -147,10 +213,8 @@ async def check_youtube():
         all_videos = list(set(latest + upcoming_api + upcoming_rss))
 
         for video_id in all_videos:
-            if video_id in posted:
+            if video_id in posted_ids:
                 continue
-
-    
             if video_id in announced_ids:
                 continue
 
@@ -180,8 +244,8 @@ async def check_youtube():
 
                 if datetime.now(timezone.utc) >= dt_utc:
                     print(f"Skipping already-passed scheduled video {video_id}")
-                    posted.append(video_id)
-                    save_json("posted.json", posted)
+                    await mark_posted(video_id)
+                    posted_ids.add(video_id)
                     continue
 
                 unix_ts = int(dt_utc.timestamp())
@@ -195,7 +259,7 @@ async def check_youtube():
                 await channel.send(message)
                 print(f"Scheduled announcement sent for {video_id}")
 
-                scheduled.append({
+                await add_scheduled_entry({
                     "video_id": video_id,
                     "time": scheduled_time,
                     "type": content_type,
@@ -204,26 +268,25 @@ async def check_youtube():
                     "notified": False
                 })
                 announced_ids.add(video_id)
-                save_json("scheduled.json", scheduled)
 
             elif not scheduled_time and live_broadcast_content == "none":
                 if content_type == "live":
                     print(f"Skipping past VOD detected as live for {video_id}")
-                    posted.append(video_id)
-                    save_json("posted.json", posted)
+                    await mark_posted(video_id)
+                    posted_ids.add(video_id)
                     continue
 
                 message = f"🎵 MIRA just dropped a new cover! Go check it out~\n{video_url}"
                 await channel.send(message)
-                posted.append(video_id)
-                save_json("posted.json", posted)
+                await mark_posted(video_id)
+                posted_ids.add(video_id)
                 print(f"Immediate upload notification sent for {video_id}")
 
             elif live_broadcast_content == "live" and video_id not in announced_ids:
                 message = f"🔴 MIRA is LIVE right now! Come join her~\n{video_url}"
                 await channel.send(message)
-                posted.append(video_id)
-                save_json("posted.json", posted)
+                await mark_posted(video_id)
+                posted_ids.add(video_id)
                 print(f"Unscheduled live notification sent for {video_id}")
 
     except Exception as e:
@@ -233,11 +296,10 @@ async def check_youtube():
 @tasks.loop(seconds=300)
 async def check_scheduled_start():
     try:
-        scheduled = load_json("scheduled.json")
-        posted = load_json("posted.json")
-        updated_scheduled = []
+        async with state_lock:
+            scheduled_snapshot = load_json("scheduled.json")
 
-        for item in scheduled:
+        for item in scheduled_snapshot:
             video_id = item["video_id"]
             dt_utc = datetime.strptime(item["time"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
             content_type = item["type"]
@@ -245,6 +307,14 @@ async def check_scheduled_start():
             notified = item.get("notified", False)
 
             if not notified and datetime.now(timezone.utc) >= dt_utc:
+                # Claim this notification atomically first. If another
+                # part of the code already flipped it (shouldn't happen
+                # given single ownership, but this keeps it safe), skip.
+                claimed = await mark_scheduled_notified(video_id)
+                if not claimed:
+                    print(f"Skipping {video_id}, already notified by another pass")
+                    continue
+
                 data = get_video_details(video_id)
                 live_status = data["snippet"].get("liveBroadcastContent", "none") if data else "none"
 
@@ -261,22 +331,9 @@ async def check_scheduled_start():
                         await channel.send(message)
                         print(f"START notification sent for {video_id}")
 
-                item["notified"] = True
-                if video_id not in posted:
-                    posted.append(video_id)
-                    save_json("posted.json", posted)
-                save_json("scheduled.json", scheduled)
+                await mark_posted(video_id)
 
-            updated_scheduled.append(item)
-
-        cutoff = datetime.now(timezone.utc).timestamp() - (2 * 24 * 60 * 60)
-        updated_scheduled = [
-            item for item in updated_scheduled
-            if not item.get("notified", False) or
-            datetime.strptime(item["time"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp() > cutoff
-        ]
-
-        save_json("scheduled.json", updated_scheduled)
+        await prune_old_scheduled()
 
     except Exception as e:
         print(f"Error in check_scheduled_start: {e}")
@@ -291,7 +348,8 @@ async def on_ready():
 
     log_channel = bot.get_channel(LOG_CHANNEL_ID)
     if log_channel:
-        scheduled = load_json("scheduled.json")
+        async with state_lock:
+            scheduled = load_json("scheduled.json")
         pending = [item for item in scheduled if not item.get("notified", False)]
 
         if pending:
