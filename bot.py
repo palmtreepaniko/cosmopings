@@ -34,8 +34,8 @@ youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 cycle_count = 0
 uploads_playlist_id = None
 
-
 state_lock = asyncio.Lock()
+
 def load_json(file):
     if not os.path.exists(file):
         with open(file, "w") as f:
@@ -198,9 +198,6 @@ async def check_youtube():
     print(f"\n===== CHECKING YOUTUBE (cycle {cycle_count}) =====")
 
     try:
-        # Fresh reads for membership checks only -- these are read-only
-        # decisions made per-video-id, not carried across the whole loop
-        # and saved back wholesale, so there's no risk of clobbering.
         posted_ids = await get_posted_ids()
         announced_ids = await get_announced_ids()
 
@@ -254,9 +251,6 @@ async def check_youtube():
                     if content_type == 'cover'
                     else f"MIRA will be 🔴 LIVE on {date_str} (GMT), which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
                 )
-                await channel.send(message)
-                print(f"Scheduled announcement sent for {video_id}")
-
                 await add_scheduled_entry({
                     "video_id": video_id,
                     "time": scheduled_time,
@@ -267,6 +261,9 @@ async def check_youtube():
                 })
                 announced_ids.add(video_id)
 
+                await channel.send(message)
+                print(f"Scheduled announcement sent for {video_id}")
+
             elif not scheduled_time and live_broadcast_content == "none":
                 if content_type == "live":
                     print(f"Skipping past VOD detected as live for {video_id}")
@@ -275,16 +272,20 @@ async def check_youtube():
                     continue
 
                 message = f"🎵 MIRA just dropped a new cover! Go check it out~\n{video_url}"
-                await channel.send(message)
+
                 await mark_posted(video_id)
                 posted_ids.add(video_id)
+
+                await channel.send(message)
                 print(f"Immediate upload notification sent for {video_id}")
 
             elif live_broadcast_content == "live" and video_id not in announced_ids:
                 message = f"🔴 MIRA is LIVE right now! Come join her~\n{video_url}"
-                await channel.send(message)
+
                 await mark_posted(video_id)
                 posted_ids.add(video_id)
+
+                await channel.send(message)
                 print(f"Unscheduled live notification sent for {video_id}")
 
     except Exception as e:
@@ -305,9 +306,6 @@ async def check_scheduled_start():
             notified = item.get("notified", False)
 
             if not notified and datetime.now(timezone.utc) >= dt_utc:
-                # Claim this notification atomically first. If another
-                # part of the code already flipped it (shouldn't happen
-                # given single ownership, but this keeps it safe), skip.
                 claimed = await mark_scheduled_notified(video_id)
                 if not claimed:
                     print(f"Skipping {video_id}, already notified by another pass")
@@ -349,14 +347,10 @@ async def on_ready():
         async with state_lock:
             scheduled = load_json("scheduled.json")
         pending = [item for item in scheduled if not item.get("notified", False)]
-
         if pending:
-            msg = "Bot restarted! These streams were announced and are still pending:\n"
-            for item in pending:
-                msg += f"- https://www.youtube.com/watch?v={item['video_id']} (scheduled: {item['time']})\n"
+            msg = "Bot restarted!"
         else:
             msg = "Bot restarted! No pending scheduled streams."
-
         await log_channel.send(msg)
 
     if not check_youtube.is_running():
