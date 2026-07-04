@@ -196,7 +196,11 @@ async def check_youtube():
     global cycle_count
     cycle_count += 1
     print(f"\n===== CHECKING YOUTUBE (cycle {cycle_count}) =====")
+
     try:
+        # Fresh reads for membership checks only -- these are read-only
+        # decisions made per-video-id, not carried across the whole loop
+        # and saved back wholesale, so there's no risk of clobbering.
         posted_ids = await get_posted_ids()
         announced_ids = await get_announced_ids()
 
@@ -250,6 +254,11 @@ async def check_youtube():
                     if content_type == 'cover'
                     else f"MIRA will be 🔴 LIVE on {date_str} (GMT), which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
                 )
+
+                # Record BEFORE sending: if the bot dies right after this
+                # write, the video is already marked announced and won't
+                # be re-announced on restart. Worst case on a send failure
+                # is a missed announcement, not a duplicate one.
                 await add_scheduled_entry({
                     "video_id": video_id,
                     "time": scheduled_time,
@@ -261,11 +270,11 @@ async def check_youtube():
                 announced_ids.add(video_id)
 
                 await channel.send(message)
-                print(f"scheduled announcement sent for {video_id}")
+                print(f"Scheduled announcement sent for {video_id}")
 
             elif not scheduled_time and live_broadcast_content == "none":
                 if content_type == "live":
-                    print(f"skipping past VOD detected as live for {video_id}")
+                    print(f"Skipping past VOD detected as live for {video_id}")
                     await mark_posted(video_id)
                     posted_ids.add(video_id)
                     continue
@@ -276,7 +285,7 @@ async def check_youtube():
                 posted_ids.add(video_id)
 
                 await channel.send(message)
-                print(f"immediate upload notification sent for {video_id}")
+                print(f"Immediate upload notification sent for {video_id}")
 
             elif live_broadcast_content == "live" and video_id not in announced_ids:
                 message = f"🔴 MIRA is LIVE right now! Come join her~\n{video_url}"
@@ -285,10 +294,10 @@ async def check_youtube():
                 posted_ids.add(video_id)
 
                 await channel.send(message)
-                print(f"unscheduled live notification sent for {video_id}")
+                print(f"Unscheduled live notification sent for {video_id}")
 
     except Exception as e:
-        print(f"error in check_youtube: {e}")
+        print(f"Error in check_youtube: {e}")
 
 
 @tasks.loop(seconds=300)
@@ -306,16 +315,19 @@ async def check_scheduled_start():
                 notified = item.get("notified", False)
 
                 if not notified and datetime.now(timezone.utc) >= dt_utc:
+                    # Claim this notification atomically first. If another
+                    # part of the code already flipped it (shouldn't happen
+                    # given single ownership, but this keeps it safe), skip.
                     claimed = await mark_scheduled_notified(video_id)
                     if not claimed:
-                        print(f"skipping {video_id}, already notified by another pass")
+                        print(f"Skipping {video_id}, already notified by another pass")
                         continue
 
                     data = get_video_details(video_id)
                     live_status = data["snippet"].get("liveBroadcastContent", "none") if data else "none"
 
                     if live_status not in ("live", "upcoming"):
-                        print(f"skipping stale notification for {video_id} (already ended)")
+                        print(f"Skipping stale notification for {video_id} (already ended)")
                     else:
                         channel = bot.get_channel(channel_id)
                         if channel:
@@ -330,20 +342,22 @@ async def check_scheduled_start():
                     await mark_posted(video_id)
 
             except Exception as item_error:
+                # A single malformed/broken entry must never block the
+                # rest of the loop or repeat forever. Log it and force
+                # it resolved so it stops re-appearing every tick/restart.
                 print(f"Error processing scheduled item {video_id}: {item_error}")
                 try:
                     await mark_scheduled_notified(video_id)
                     await mark_posted(video_id)
                 except Exception as cleanup_error:
-                    print(f"failed to force resolve broken item {video_id}: {cleanup_error}")
+                    print(f"Failed to force-resolve broken item {video_id}: {cleanup_error}")
 
                 log_channel = bot.get_channel(LOG_CHANNEL_ID)
                 if log_channel:
                     await log_channel.send(
-                        f"scheduled entry for `{video_id}` was broken and had to be force resolved: {item_error}"
+                        f"Scheduled entry for `{video_id}` was broken and had to be force-resolved: {item_error}"
                     )
                 continue
-
         stale_cutoff = datetime.now(timezone.utc).timestamp() - (3 * 24 * 60 * 60)
         for item in scheduled_snapshot:
             video_id = item.get("video_id", "unknown")
@@ -352,15 +366,15 @@ async def check_scheduled_start():
             try:
                 dt_utc = datetime.strptime(item["time"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
             except Exception:
-                continue
+                continue  # already handled/logged above
             if dt_utc.timestamp() < stale_cutoff:
-                print(f"force resolving stale stuck entry {video_id}")
+                print(f"Force-resolving stale stuck entry {video_id}")
                 await mark_scheduled_notified(video_id)
                 await mark_posted(video_id)
                 log_channel = bot.get_channel(LOG_CHANNEL_ID)
                 if log_channel:
                     await log_channel.send(
-                        f"scheduled entry for `{video_id}` was stuck unnotified for 3+ days and has been force resolved."
+                        f"Scheduled entry for `{video_id}` was stuck un-notified for 3+ days and has been force-resolved."
                     )
 
         await prune_old_scheduled()
@@ -383,11 +397,7 @@ async def on_ready():
         pending = [item for item in scheduled if not item.get("notified", False)]
 
         if pending:
-            msg = "Bot restarted! These streams were announced and are still pending:\n"
-            for item in pending:
-                vid = item.get("video_id", "unknown")
-                when = item.get("time", "unknown time")
-                msg += f"- https://www.youtube.com/watch?v={vid} (scheduled: {when})\n"
+            msg = "Bot restarted!"
         else:
             msg = "Bot restarted! No pending scheduled streams."
 
