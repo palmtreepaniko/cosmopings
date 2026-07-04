@@ -50,7 +50,6 @@ def save_json(file, data):
 
 
 async def mark_posted(video_id):
-    """Load posted.json fresh, add video_id if missing, save. Locked."""
     async with state_lock:
         posted = load_json("posted.json")
         if video_id not in posted:
@@ -59,7 +58,6 @@ async def mark_posted(video_id):
 
 
 async def add_scheduled_entry(entry):
-    """Load scheduled.json fresh, append entry, save. Locked."""
     async with state_lock:
         scheduled = load_json("scheduled.json")
         scheduled.append(entry)
