@@ -1,120 +1,98 @@
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
-[![discord.py](https://img.shields.io/badge/discord.py-2.x-5865F2.svg)](https://discordpy.readthedocs.io/)
-[![YouTube API](https://img.shields.io/badge/YouTube-Data%20API%20v3-red.svg)](https://developers.google.com/youtube/v3)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+✨ Cosmopings ✨
 
-# ✨ Cosmopings ✨
+Un bot Discord qui surveille une chaîne YouTube et notifie automatiquement des salons Discord désignés lorsqu'une nouvelle cover ou un live est publié.
 
-A Discord bot that monitors a YouTube channel and automatically notifies designated Discord channels when a new cover or live stream is posted.
+## Fonctionnalités
 
----
+- Interroge l'API YouTube et le flux RSS toutes les 5 minutes pour détecter les nouvelles publications
+- Détecte le type de contenu (cover vs. live) grâce aux mots-clés du titre et aux hashtags de la description
+- Publie des annonces de première/stream programmée avec horodatage relatif Discord
+- Envoie une notification de suivi lorsqu'un événement programmé passe réellement en direct
+- Gère les lives non programmés qui démarrent sans annonce préalable
+- Évite les notifications en double grâce à un suivi persistant en JSON
 
-## Features
+## Fonctionnement
 
-- Polls the YouTube API and RSS feed every 5 minutes for new uploads
-- Detects content type (cover vs. live) using title keywords and description hashtags
-- Posts scheduled premiere/stream announcements with Discord relative timestamps
-- Sends a follow-up notification when a scheduled event actually goes live
-- Handles unscheduled streams that go live without prior announcement
-- Prevents duplicate notifications using persistent JSON tracking
-
----
-
-## How It Works
-
-| Event | Behavior |
+| Événement | Comportement |
 |---|---|
-| New cover upload | Posts immediately to the covers channel |
-| Scheduled premiere | Posts an announcement with a countdown timestamp |
-| Premiere goes live | Sends a follow-up "it's live now" notification |
-| Unscheduled live stream | Detects and notifies in real time |
+| Nouvelle cover publiée | Publiée immédiatement dans le salon covers |
+| Première programmée | Publie une annonce avec compte à rebours |
+| La première passe en direct | Envoie une notification de suivi "c'est en direct maintenant" |
+| Live non programmé | Détecté et notifié en temps réel |
 
-Content type is determined by:
-- **Keywords** in the title (e.g. `cover`, `live`, `stream`)
-- **Hashtags** in the description
+Le type de contenu est déterminé par :
+- Les mots-clés dans le titre (ex. cover, live, stream)
+- Les hashtags dans la description
 
----
+## Installation
 
-## Setup
-
-### Prerequisites
+### Prérequis
 
 - Python 3.8+
-- A Discord bot token
-- A YouTube Data API v3 key
+- Un token de bot Discord
+- Une clé API YouTube Data v3
 
 ### Installation
 
-```bash
+```
 git clone https://github.com/palmtreepaniko/cosmopings
 cd cosmopings
 pip install -r requirements.txt
 ```
 
-### Environment Variables
+### Variables d'environnement
 
-Create a `.env` file or set the following environment variables:
+Crée un fichier `.env` ou définis les variables d'environnement suivantes :
 
-```env
-DISCORD_TOKEN=your_discord_bot_token
-YOUTUBE_API_KEY=your_youtube_api_key
+```
+DISCORD_TOKEN=ton_token_de_bot_discord
+YOUTUBE_API_KEY=ta_cle_api_youtube
 ```
 
 ### Configuration
 
-Edit the constants at the top of `bot.py` to match your setup:
+Modifie les constantes en haut de `bot.py` selon ta configuration :
 
-```python
-CHANNEL_ID = "your_youtube_channel_id"
-
-COVER_CHANNEL_ID = 000000000000000000   # Discord channel ID for covers
-LIVE_CHANNEL_ID  = 000000000000000000   # Discord channel ID for live streams
+```
+CHANNEL_ID = "ton_id_de_chaine_youtube"
+COVER_CHANNEL_ID = 000000000000000000   # ID du salon Discord pour les covers
+LIVE_CHANNEL_ID  = 000000000000000000   # ID du salon Discord pour les lives
 
 COVER_KEYWORDS = ["cover"]
 LIVE_KEYWORDS  = ["live", "stream", "livestream"]
 
-COVER_HASHTAGS = ["#your_cover_hashtag"]
-LIVE_HASHTAGS  = ["#your_live_hashtag"]
+COVER_HASHTAGS = ["#ton_hashtag_cover"]
+LIVE_HASHTAGS  = ["#ton_hashtag_live"]
 ```
 
-### Running the Bot
+## Lancer le bot
 
-```bash
+```
 python bot.py
 ```
 
----
-
-## File Structure
+## Structure des fichiers
 
 ```
 cosmopings/
 ├── bot.py           
-├── posted.json      # Tracks already-notified video IDs
-├── scheduled.json   # Tracks upcoming scheduled events
+├── posted.json      # Suit les vidéos déjà notifiées
+├── scheduled.json   # Suit les événements programmés à venir
 └── requirements.txt
 ```
 
----
+## Dépendances
 
-## Requirements
+- discord.py
+- google-api-python-client
 
-```
-discord.py
-google-api-python-client
-```
+## Permissions du bot Discord
 
----
+Assure-toi que ton bot dispose des permissions suivantes :
+- Envoyer des messages
+- Voir les salons
 
-## Discord Bot Permissions
+## Remarques
 
-Make sure your bot has the following permissions:
-- `Send Messages`
-- `View Channels`
-
----
-
-## Notes
-
-- The YouTube `search().list` endpoint (used for upcoming stream detection) consumes more API quota. It runs every 6 cycles (~30 minutes) by default to stay within limits.
-- `posted.json` and `scheduled.json` are created automatically on first run.
+- L'endpoint YouTube `search().list` (utilisé pour la détection des streams à venir) consomme plus de quota API. Il s'exécute tous les 6 cycles (~30 minutes) par défaut pour rester dans les limites.
+- `posted.json` et `scheduled.json` sont créés automatiquement au premier lancement.
