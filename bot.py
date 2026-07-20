@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import json
 import os
 import asyncio
+import traceback
 import xml.etree.ElementTree as ET
 import urllib.request
 
@@ -23,8 +24,12 @@ UPCOMING_CHECK_EVERY = 6
 COVER_KEYWORDS = ["cover"]
 LIVE_KEYWORDS = ["live", "stream", "livestream"]
 
-COVER_HASHTAGS = ["#miracle_melody"]
-LIVE_HASHTAGS = ["#miracle_live"]
+# NOTE: matched as plain substrings (no leading '#' required), since your
+# actual description tags read like "MIRAcle_melody" / "MIRAcle_live"
+# with no '#' in front of them. The old code required a literal '#',
+# so this path never actually matched anything in practice.
+COVER_HASHTAGS = ["miracle_melody"]
+LIVE_HASHTAGS = ["miracle_live"]
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -36,6 +41,8 @@ uploads_playlist_id = None
 
 
 state_lock = asyncio.Lock()
+
+
 def load_json(file):
     if not os.path.exists(file):
         with open(file, "w") as f:
@@ -102,8 +109,8 @@ async def prune_old_scheduled():
 
 
 def detect_type(title, description, live_broadcast_content):
-    title_lower = title.lower()
-    desc_lower = description.lower()
+    title_lower = (title or "").lower()
+    desc_lower = (description or "").lower()
 
     for kw in COVER_KEYWORDS:
         if kw.lower() in title_lower:
@@ -113,10 +120,10 @@ def detect_type(title, description, live_broadcast_content):
             return "live"
 
     for tag in COVER_HASHTAGS:
-        if tag in desc_lower:
+        if tag.lower() in desc_lower:
             return "cover"
     for tag in LIVE_HASHTAGS:
-        if tag in desc_lower:
+        if tag.lower() in desc_lower:
             return "live"
 
     if live_broadcast_content in ("upcoming", "live"):
@@ -191,6 +198,22 @@ def get_video_details(video_id):
     return response["items"][0]
 
 
+def dedupe_keep_order(*lists):
+    """Union of several lists, newest-first, without ever hitting a
+    hash-order-dependent set() during iteration. `latest` (the uploads
+    playlist) already comes back newest-first from the API, so keeping
+    that ordering intact matters -- a bare set() destroys it and makes
+    the processing order effectively random from run to run."""
+    seen = set()
+    ordered = []
+    for lst in lists:
+        for vid in lst:
+            if vid not in seen:
+                seen.add(vid)
+                ordered.append(vid)
+    return ordered
+
+
 @tasks.loop(seconds=CHECK_INTERVAL)
 async def check_youtube():
     global cycle_count
@@ -198,9 +221,6 @@ async def check_youtube():
     print(f"\n===== CHECKING YOUTUBE (cycle {cycle_count}) =====")
 
     try:
-        # Fresh reads for membership checks only -- these are read-only
-        # decisions made per-video-id, not carried across the whole loop
-        # and saved back wholesale, so there's no risk of clobbering.
         posted_ids = await get_posted_ids()
         announced_ids = await get_announced_ids()
 
@@ -208,96 +228,117 @@ async def check_youtube():
         upcoming_rss = get_upcoming_videos_rss()
         upcoming_api = get_upcoming_videos_api() if cycle_count % UPCOMING_CHECK_EVERY == 0 else []
 
-        all_videos = list(set(latest + upcoming_api + upcoming_rss))
+        # latest is newest-first from the API -- preserve that order instead
+        # of dumping everything into a set().
+        all_videos = dedupe_keep_order(latest, upcoming_api, upcoming_rss)
 
         for video_id in all_videos:
-            if video_id in posted_ids:
-                continue
-            if video_id in announced_ids:
-                continue
-
-            data = get_video_details(video_id)
-            if not data:
-                continue
-
-            snippet = data["snippet"]
-            title = snippet["title"]
-            description = snippet.get("description", "")
-            live_broadcast_content = snippet.get("liveBroadcastContent", "none")
-            scheduled_time = data.get("liveStreamingDetails", {}).get("scheduledStartTime")
-
-            content_type = detect_type(title, description, live_broadcast_content)
-            if content_type is None:
-                continue
-
-            channel_id = COVER_CHANNEL_ID if content_type == "cover" else LIVE_CHANNEL_ID
-            channel = bot.get_channel(channel_id)
-            if channel is None:
-                continue
-
-            video_url = f"https://www.youtube.com/watch?v={video_id}"
-
-            if scheduled_time:
-                dt_utc = datetime.strptime(scheduled_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-
-                if datetime.now(timezone.utc) >= dt_utc:
-                    print(f"Skipping already-passed scheduled video {video_id}")
-                    await mark_posted(video_id)
-                    posted_ids.add(video_id)
+            # Each video gets its own try/except now: previously the whole
+            # for-loop shared one try/except, so an exception thrown while
+            # handling one video silently aborted processing of every video
+            # after it in that cycle -- with only a generic print(), no
+            # Discord message, and no indication of which video was skipped.
+            try:
+                if video_id in posted_ids:
+                    continue
+                if video_id in announced_ids:
                     continue
 
-                unix_ts = int(dt_utc.timestamp())
-                date_str = dt_utc.strftime('%d/%m/%Y %H:%M')
-
-                message = (
-                    f"🎵 MIRA is premiering a new cover on {date_str} (GMT), which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
-                    if content_type == 'cover'
-                    else f"MIRA will be 🔴 LIVE on {date_str} (GMT), which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
-                )
-
-                # Record BEFORE sending: if the bot dies right after this
-                # write, the video is already marked announced and won't
-                # be re-announced on restart. Worst case on a send failure
-                # is a missed announcement, not a duplicate one.
-                await add_scheduled_entry({
-                    "video_id": video_id,
-                    "time": scheduled_time,
-                    "type": content_type,
-                    "channel_id": channel_id,
-                    "announced": True,
-                    "notified": False
-                })
-                announced_ids.add(video_id)
-
-                await channel.send(message)
-                print(f"Scheduled announcement sent for {video_id}")
-
-            elif not scheduled_time and live_broadcast_content == "none":
-                if content_type == "live":
-                    print(f"Skipping past VOD detected as live for {video_id}")
-                    await mark_posted(video_id)
-                    posted_ids.add(video_id)
+                data = get_video_details(video_id)
+                if not data:
+                    print(f"  {video_id}: no data returned from API, skipping this cycle")
                     continue
 
-                message = f"🎵 MIRA just dropped a new cover! Go check it out~\n{video_url}"
+                snippet = data["snippet"]
+                title = snippet["title"]
+                description = snippet.get("description") or ""
+                live_broadcast_content = snippet.get("liveBroadcastContent", "none")
+                scheduled_time = data.get("liveStreamingDetails", {}).get("scheduledStartTime")
 
-                await mark_posted(video_id)
-                posted_ids.add(video_id)
+                content_type = detect_type(title, description, live_broadcast_content)
+                if content_type is None:
+                    print(f"  {video_id} ('{title}'): no cover/live match, skipping")
+                    continue
 
-                await channel.send(message)
-                print(f"Immediate upload notification sent for {video_id}")
+                channel_id = COVER_CHANNEL_ID if content_type == "cover" else LIVE_CHANNEL_ID
+                channel = bot.get_channel(channel_id)
+                if channel is None:
+                    print(f"  {video_id}: target channel {channel_id} not found, skipping")
+                    continue
 
-            elif live_broadcast_content == "live" and video_id not in announced_ids:
-                message = f"🔴 MIRA is LIVE right now! Come join her~\n{video_url}"
+                video_url = f"https://www.youtube.com/watch?v={video_id}"
 
-                await mark_posted(video_id)
-                posted_ids.add(video_id)
+                if scheduled_time:
+                    dt_utc = datetime.strptime(scheduled_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
 
-                await channel.send(message)
-                print(f"Unscheduled live notification sent for {video_id}")
+                    if datetime.now(timezone.utc) >= dt_utc:
+                        print(f"Skipping already-passed scheduled video {video_id}")
+                        await mark_posted(video_id)
+                        posted_ids.add(video_id)
+                        continue
+
+                    unix_ts = int(dt_utc.timestamp())
+                    date_str = dt_utc.strftime('%d/%m/%Y %H:%M')
+
+                    message = (
+                        f"🎵 MIRA is premiering a new cover on {date_str} (GMT), which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
+                        if content_type == 'cover'
+                        else f"MIRA will be 🔴 LIVE on {date_str} (GMT), which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
+                    )
+
+                    await add_scheduled_entry({
+                        "video_id": video_id,
+                        "time": scheduled_time,
+                        "type": content_type,
+                        "channel_id": channel_id,
+                        "announced": True,
+                        "notified": False
+                    })
+                    announced_ids.add(video_id)
+
+                    await channel.send(message)
+                    print(f"Scheduled announcement sent for {video_id}")
+
+                elif not scheduled_time and live_broadcast_content == "none":
+                    if content_type == "live":
+                        print(f"Skipping past VOD detected as live for {video_id}")
+                        await mark_posted(video_id)
+                        posted_ids.add(video_id)
+                        continue
+
+                    message = f"🎵 MIRA just dropped a new cover! Go check it out~\n{video_url}"
+
+                    await mark_posted(video_id)
+                    posted_ids.add(video_id)
+
+                    await channel.send(message)
+                    print(f"Immediate upload notification sent for {video_id}")
+
+                elif live_broadcast_content == "live" and video_id not in announced_ids:
+                    message = f"🔴 MIRA is LIVE right now! Come join her~\n{video_url}"
+
+                    await mark_posted(video_id)
+                    posted_ids.add(video_id)
+
+                    await channel.send(message)
+                    print(f"Unscheduled live notification sent for {video_id}")
+
+            except Exception as item_error:
+                # A single bad video must never take the rest of the batch
+                # down with it. Log it loudly (with the video id so it's
+                # searchable) and move on to the next one.
+                print(f"Error processing video {video_id} in check_youtube: {item_error}")
+                traceback.print_exc()
+                log_channel = bot.get_channel(LOG_CHANNEL_ID)
+                if log_channel:
+                    await log_channel.send(
+                        f"⚠️ Failed to process video `{video_id}` this cycle: {item_error}"
+                    )
+                continue
 
     except Exception as e:
         print(f"Error in check_youtube: {e}")
+        traceback.print_exc()
 
 
 @tasks.loop(seconds=300)
@@ -315,9 +356,6 @@ async def check_scheduled_start():
                 notified = item.get("notified", False)
 
                 if not notified and datetime.now(timezone.utc) >= dt_utc:
-                    # Claim this notification atomically first. If another
-                    # part of the code already flipped it (shouldn't happen
-                    # given single ownership, but this keeps it safe), skip.
                     claimed = await mark_scheduled_notified(video_id)
                     if not claimed:
                         print(f"Skipping {video_id}, already notified by another pass")
@@ -342,9 +380,6 @@ async def check_scheduled_start():
                     await mark_posted(video_id)
 
             except Exception as item_error:
-                # A single malformed/broken entry must never block the
-                # rest of the loop or repeat forever. Log it and force
-                # it resolved so it stops re-appearing every tick/restart.
                 print(f"Error processing scheduled item {video_id}: {item_error}")
                 try:
                     await mark_scheduled_notified(video_id)
@@ -358,6 +393,7 @@ async def check_scheduled_start():
                         f"Scheduled entry for `{video_id}` was broken and had to be force-resolved: {item_error}"
                     )
                 continue
+
         stale_cutoff = datetime.now(timezone.utc).timestamp() - (3 * 24 * 60 * 60)
         for item in scheduled_snapshot:
             video_id = item.get("video_id", "unknown")
@@ -366,21 +402,24 @@ async def check_scheduled_start():
             try:
                 dt_utc = datetime.strptime(item["time"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
             except Exception:
-                continue  # already handled/logged above
+                continue
             if dt_utc.timestamp() < stale_cutoff:
-                print(f"Force-resolving stale stuck entry {video_id}")
+                print(f"Force-resolving stale stuck entry {video_id} (scheduled for {item['time']})")
                 await mark_scheduled_notified(video_id)
                 await mark_posted(video_id)
                 log_channel = bot.get_channel(LOG_CHANNEL_ID)
                 if log_channel:
                     await log_channel.send(
-                        f"Scheduled entry for `{video_id}` was stuck un-notified for 3+ days and has been force-resolved."
+                        f"⚠️ Scheduled entry for `{video_id}` (was set for {item['time']}) sat un-notified for 3+ days "
+                        f"and has been force-resolved WITHOUT sending a notification. "
+                        f"If this was a real upload, check https://www.youtube.com/watch?v={video_id} manually."
                     )
 
         await prune_old_scheduled()
 
     except Exception as e:
         print(f"Error in check_scheduled_start: {e}")
+        traceback.print_exc()
 
 
 @bot.event
