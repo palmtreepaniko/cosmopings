@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import json
 import os
 import asyncio
+import re
 import traceback
 import xml.etree.ElementTree as ET
 import urllib.request
@@ -24,12 +25,34 @@ UPCOMING_CHECK_EVERY = 6
 COVER_KEYWORDS = ["cover"]
 LIVE_KEYWORDS = ["live", "stream", "livestream"]
 
-# NOTE: matched as plain substrings (no leading '#' required), since your
-# actual description tags read like "MIRAcle_melody" / "MIRAcle_live"
-# with no '#' in front of them. The old code required a literal '#',
-# so this path never actually matched anything in practice.
+
 COVER_HASHTAGS = ["miracle_melody"]
 LIVE_HASHTAGS = ["miracle_live"]
+
+
+SHORTS_MAX_DURATION_SECONDS = 60
+SHORTS_TAGS = ["#shorts", "#short"]
+
+
+def parse_iso8601_duration(duration_str):
+    if not duration_str:
+        return None
+    match = re.match(
+        r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration_str
+    )
+    if not match:
+        return None
+    hours, minutes, seconds = (int(g) if g else 0 for g in match.groups())
+    return hours * 3600 + minutes * 60 + seconds
+
+
+def is_probable_short(title, description, duration_seconds):
+    text = f"{title or ''} {description or ''}".lower()
+    if any(tag in text for tag in SHORTS_TAGS):
+        return True
+    if duration_seconds is not None and duration_seconds <= SHORTS_MAX_DURATION_SECONDS:
+        return True
+    return False
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -145,7 +168,7 @@ def get_latest_videos():
     request = youtube.playlistItems().list(
         part="snippet",
         playlistId=uploads_playlist_id,
-        maxResults=10
+        maxResults=25
     )
     response = request.execute()
     return [item["snippet"]["resourceId"]["videoId"] for item in response["items"]]
@@ -189,7 +212,7 @@ def get_upcoming_videos_rss():
 
 def get_video_details(video_id):
     request = youtube.videos().list(
-        part="snippet,liveStreamingDetails",
+        part="snippet,liveStreamingDetails,contentDetails",
         id=video_id
     )
     response = request.execute()
@@ -199,11 +222,6 @@ def get_video_details(video_id):
 
 
 def dedupe_keep_order(*lists):
-    """Union of several lists, newest-first, without ever hitting a
-    hash-order-dependent set() during iteration. `latest` (the uploads
-    playlist) already comes back newest-first from the API, so keeping
-    that ordering intact matters -- a bare set() destroys it and makes
-    the processing order effectively random from run to run."""
     seen = set()
     ordered = []
     for lst in lists:
@@ -228,16 +246,10 @@ async def check_youtube():
         upcoming_rss = get_upcoming_videos_rss()
         upcoming_api = get_upcoming_videos_api() if cycle_count % UPCOMING_CHECK_EVERY == 0 else []
 
-        # latest is newest-first from the API -- preserve that order instead
-        # of dumping everything into a set().
         all_videos = dedupe_keep_order(latest, upcoming_api, upcoming_rss)
+        print(f"  Candidates this cycle ({len(all_videos)}): {all_videos}")
 
         for video_id in all_videos:
-            # Each video gets its own try/except now: previously the whole
-            # for-loop shared one try/except, so an exception thrown while
-            # handling one video silently aborted processing of every video
-            # after it in that cycle -- with only a generic print(), no
-            # Discord message, and no indication of which video was skipped.
             try:
                 if video_id in posted_ids:
                     continue
@@ -254,6 +266,18 @@ async def check_youtube():
                 description = snippet.get("description") or ""
                 live_broadcast_content = snippet.get("liveBroadcastContent", "none")
                 scheduled_time = data.get("liveStreamingDetails", {}).get("scheduledStartTime")
+                is_scheduled_or_live = bool(scheduled_time) or live_broadcast_content in ("live", "upcoming")
+                duration_seconds = None
+                if not is_scheduled_or_live:
+                    duration_seconds = parse_iso8601_duration(
+                        data.get("contentDetails", {}).get("duration")
+                    )
+
+                if is_probable_short(title, description, duration_seconds):
+                    print(f"  {video_id} ('{title}', {duration_seconds}s): Short, skipping")
+                    await mark_posted(video_id)
+                    posted_ids.add(video_id)
+                    continue
 
                 content_type = detect_type(title, description, live_broadcast_content)
                 if content_type is None:
@@ -324,9 +348,6 @@ async def check_youtube():
                     print(f"Unscheduled live notification sent for {video_id}")
 
             except Exception as item_error:
-                # A single bad video must never take the rest of the batch
-                # down with it. Log it loudly (with the video id so it's
-                # searchable) and move on to the next one.
                 print(f"Error processing video {video_id} in check_youtube: {item_error}")
                 traceback.print_exc()
                 log_channel = bot.get_channel(LOG_CHANNEL_ID)
