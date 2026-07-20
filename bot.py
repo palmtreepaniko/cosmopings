@@ -4,6 +4,7 @@ from googleapiclient.discovery import build
 from datetime import datetime, timezone
 import json
 import os
+import re
 import xml.etree.ElementTree as ET
 import urllib.request
 
@@ -21,8 +22,14 @@ UPCOMING_CHECK_EVERY = 6
 COVER_KEYWORDS = ["cover"]
 LIVE_KEYWORDS = ["live", "stream", "livestream"]
 
-COVER_HASHTAGS = ["#miracle_melody"]
-LIVE_HASHTAGS = ["#miracle_live"]
+COVER_HASHTAGS = ["miracle_melody"]
+LIVE_HASHTAGS = ["miracle_live"]
+
+SHORTS_MAX_DURATION_SECONDS = 60
+SHORTS_TAGS = ["#shorts", "#short"]
+
+
+NOTIFY_MAX_AGE_HOURS = 24
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -43,9 +50,26 @@ def save_json(file, data):
     with open(file, "w") as f:
         json.dump(data, f, indent=4)
 
+def parse_iso8601_duration(duration_str):
+    if not duration_str:
+        return None
+    match = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration_str)
+    if not match:
+        return None
+    hours, minutes, seconds = (int(g) if g else 0 for g in match.groups())
+    return hours * 3600 + minutes * 60 + seconds
+
+def is_probable_short(title, description, duration_seconds):
+    text = f"{title or ''} {description or ''}".lower()
+    if any(tag in text for tag in SHORTS_TAGS):
+        return True
+    if duration_seconds is not None and 0 < duration_seconds <= SHORTS_MAX_DURATION_SECONDS:
+        return True
+    return False
+
 def detect_type(title, description, live_broadcast_content):
-    title_lower = title.lower()
-    desc_lower = description.lower()
+    title_lower = (title or "").lower()
+    desc_lower = (description or "").lower()
 
     for kw in COVER_KEYWORDS:
         if kw.lower() in title_lower:
@@ -78,7 +102,7 @@ def get_latest_videos():
     request = youtube.playlistItems().list(
         part="snippet",
         playlistId=uploads_playlist_id,
-        maxResults=10
+        maxResults=25
     )
     response = request.execute()
     return [item["snippet"]["resourceId"]["videoId"] for item in response["items"]]
@@ -119,7 +143,7 @@ def get_upcoming_videos_rss():
 
 def get_video_details(video_id):
     request = youtube.videos().list(
-        part="snippet,liveStreamingDetails",
+        part="snippet,liveStreamingDetails,contentDetails",
         id=video_id
     )
     response = request.execute()
@@ -143,6 +167,7 @@ async def check_youtube():
         upcoming_api = get_upcoming_videos_api() if cycle_count % UPCOMING_CHECK_EVERY == 0 else []
 
         all_videos = list(set(latest + upcoming_api + upcoming_rss))
+        print(f"  Candidates this cycle ({len(all_videos)}): {all_videos}")
 
         for video_id in all_videos:
             if video_id in posted:
@@ -154,13 +179,26 @@ async def check_youtube():
 
             snippet = data["snippet"]
             title = snippet["title"]
-            description = snippet.get("description", "")
+            description = snippet.get("description") or ""
             live_broadcast_content = snippet.get("liveBroadcastContent", "none")
 
             scheduled_time = data.get("liveStreamingDetails", {}).get("scheduledStartTime")
 
+            is_scheduled_or_live = bool(scheduled_time) or live_broadcast_content in ("live", "upcoming")
+            duration_seconds = None
+            if not is_scheduled_or_live:
+                duration_seconds = parse_iso8601_duration(
+                    data.get("contentDetails", {}).get("duration")
+                )
+
+            if is_probable_short(title, description, duration_seconds):
+                print(f"  {video_id} ('{title}', {duration_seconds}s): Short, skipping")
+                posted.append(video_id)
+                continue
+
             content_type = detect_type(title, description, live_broadcast_content)
             if content_type is None:
+                print(f"  {video_id} ('{title}'): no cover/live match, skipping")
                 continue
 
             channel_id = COVER_CHANNEL_ID if content_type == "cover" else LIVE_CHANNEL_ID
@@ -172,6 +210,24 @@ async def check_youtube():
 
             if scheduled_time and video_id not in scheduled_ids:
                 dt_utc = datetime.strptime(scheduled_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+
+                if datetime.now(timezone.utc) >= dt_utc:
+                    age_hours = (datetime.now(timezone.utc) - dt_utc).total_seconds() / 3600
+                    if age_hours > NOTIFY_MAX_AGE_HOURS:
+                        print(f"  {video_id}: scheduled time passed {age_hours:.1f}h ago, backlog, not notifying")
+                        posted.append(video_id)
+                        continue
+
+                    message = (
+                        f"🎵 MIRA just dropped a new cover! Go check it out~\n{video_url}"
+                        if content_type == "cover"
+                        else f"🔴 MIRA is LIVE right now! Come join her~\n{video_url}"
+                    )
+                    await channel.send(message)
+                    posted.append(video_id)
+                    print(f"Catch-up notification sent for {video_id}")
+                    continue
+
                 unix_ts = int(dt_utc.timestamp())
                 date_str = dt_utc.strftime('%d/%m/%Y %H:%M')
 
@@ -193,6 +249,15 @@ async def check_youtube():
                 scheduled_ids.add(video_id)
 
             elif not scheduled_time and live_broadcast_content == "none":
+                published_at = snippet.get("publishedAt")
+                if published_at:
+                    published_dt = datetime.strptime(published_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                    age_hours = (datetime.now(timezone.utc) - published_dt).total_seconds() / 3600
+                    if age_hours > NOTIFY_MAX_AGE_HOURS:
+                        print(f"  {video_id} ('{title}'): uploaded {age_hours:.1f}h ago, backlog, not notifying")
+                        posted.append(video_id)
+                        continue
+
                 message = f"🎵 MIRA just dropped a new cover! Go check it out~\n{video_url}" if content_type == "cover" else f"🔴 MIRA is live right now! Come join her~\n{video_url}"
                 await channel.send(message)
                 posted.append(video_id)
