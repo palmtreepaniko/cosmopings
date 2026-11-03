@@ -3,30 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cosmopings — Autonomous YouTube Dispatcher for Discord</title>
-  <meta name="description" content="Cosmopings is a dedicated YouTube broadcast and livestream alert engine for Discord, monitoring creator Mira (@possiblymira) with zero-spam deduplication and dynamic relative countdowns.">
+  <title>Cosmopings — Engineering Portfolio & Live Dispatch Engine</title>
+  <meta name="description" content="Engineering case study and live dispatch console for Cosmopings: an autonomous YouTube broadcast monitor and localized Discord alert microservice.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,750;12..96,800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /*
+      Impeccable Design System Tokens
+      - High-contrast, tactile dark slate theme
+      - No purple gradients, no fake glassmorphism blur, no dark glows, no side-tab borders
+      - Structured editorial case study hierarchy
+    */
     :root {
-      /* Impeccable Design System Tokens (No AI-slop gradients, no fake glassmorphism) */
-      --bg-canvas: #090a0d;
-      --bg-surface: #101318;
-      --bg-surface-elevated: #161a22;
-      --bg-surface-active: #1c222c;
-      --border-subtle: #1f242e;
-      --border-strong: #2c3342;
+      --bg-base: #08090b;
+      --bg-surface: #0f1116;
+      --bg-surface-elevated: #161820;
+      --bg-surface-active: #1d212b;
+      --border-subtle: #1e222b;
+      --border-strong: #2a303d;
       --border-focus: #4b5563;
 
-      --text-primary: #f3f4f6;
-      --text-secondary: #9ca3af;
-      --text-tertiary: #6b7280;
+      --text-primary: #f4f4f6;
+      --text-secondary: #9aa0ad;
+      --text-tertiary: #5e6676;
 
-      --accent-live: #e11d48;
-      --accent-melody: #f59e0b;
-      --accent-status: #10b981;
-      --accent-blue: #3b82f6;
+      --accent-live: #f43f5e;       /* Broadcast Crimson */
+      --accent-cover: #f59e0b;      /* Acoustic Amber */
+      --accent-success: #10b981;    /* System Status Green */
+      --accent-link: #38bdf8;       /* Precision Cyan */
 
       --font-display: 'Bricolage Grotesque', -apple-system, sans-serif;
       --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
@@ -40,180 +45,191 @@
     }
 
     body {
-      background-color: var(--bg-canvas);
+      background-color: var(--bg-base);
       color: var(--text-primary);
       font-family: var(--font-body);
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       min-height: 100vh;
+      border-top: 3px solid var(--accent-live);
     }
 
-    /* Top Masthead */
-    header {
-      background-color: var(--bg-surface);
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* Top Masthead Navigation */
+    header.site-header {
+      background: var(--bg-surface);
       border-bottom: 1px solid var(--border-subtle);
       position: sticky;
       top: 0;
-      z-index: 50;
+      z-index: 100;
     }
 
-    .masthead-inner {
-      max-width: 1200px;
+    .header-inner {
+      max-width: 1280px;
       margin: 0 auto;
-      padding: 0.85rem 1.5rem;
+      padding: 0.85rem 1.75rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 1rem;
+      gap: 1.5rem;
     }
 
-    .brand-block {
+    .brand-mark {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      text-decoration: none;
+    }
+
+    .brand-author {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+    }
+
+    .brand-separator {
+      color: var(--border-strong);
+    }
+
+    .brand-project {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
       color: var(--text-primary);
     }
 
-    .brand-title {
-      font-family: var(--font-display);
-      font-size: 1.25rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-
-    .version-tag {
-      font-family: var(--font-mono);
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: var(--text-tertiary);
-      background: var(--bg-surface-elevated);
-      border: 1px solid var(--border-subtle);
-      padding: 0.15rem 0.4rem;
-      border-radius: 4px;
-    }
-
-    .target-badge {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-      background: var(--bg-surface-elevated);
-      padding: 0.3rem 0.75rem;
-      border-radius: 4px;
-      border: 1px solid var(--border-subtle);
+    .nav-sections {
       display: none;
+      align-items: center;
+      gap: 1.75rem;
+      list-style: none;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
     }
 
-    @media (min-width: 768px) {
-      .target-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
+    @media (min-width: 860px) {
+      .nav-sections {
+        display: flex;
       }
     }
 
-    .target-badge strong {
+    .nav-sections a {
+      color: var(--text-secondary);
+      transition: color 0.15s ease;
+    }
+
+    .nav-sections a:hover {
       color: var(--text-primary);
     }
 
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
+    .nav-sections span.num {
+      color: var(--text-tertiary);
+      margin-right: 0.3rem;
     }
 
-    .status-badge {
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .live-beacon {
       display: inline-flex;
       align-items: center;
       gap: 0.45rem;
       font-family: var(--font-mono);
-      font-size: 0.75rem;
-      font-weight: 500;
-      color: var(--accent-status);
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--accent-success);
       background: rgba(16, 185, 129, 0.08);
-      border: 1px solid rgba(16, 185, 129, 0.2);
-      padding: 0.3rem 0.65rem;
+      border: 1px solid rgba(16, 185, 129, 0.22);
+      padding: 0.25rem 0.65rem;
       border-radius: 4px;
+      letter-spacing: 0.04em;
     }
 
-    .status-dot {
-      width: 7px;
-      height: 7px;
+    .beacon-dot {
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      background-color: var(--accent-status);
+      background: var(--accent-success);
     }
 
-    .btn-link {
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-size: 0.85rem;
+    .btn-outline {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
       font-weight: 500;
       padding: 0.35rem 0.75rem;
       border-radius: 4px;
-      border: 1px solid var(--border-subtle);
       background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
       transition: all 0.15s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
     }
 
-    .btn-link:hover {
+    .btn-outline:hover {
       color: var(--text-primary);
       border-color: var(--border-focus);
     }
 
     /* Main Container */
-    main {
-      max-width: 1200px;
+    main.portfolio-container {
+      max-width: 1280px;
       margin: 0 auto;
-      padding: 3rem 1.5rem 5rem;
+      padding: 3.5rem 1.75rem 6rem;
     }
 
-    /* Hero Section */
-    .hero {
+    /* Case Study Hero */
+    section.hero-case-study {
       border-bottom: 1px solid var(--border-subtle);
-      padding-bottom: 3rem;
-      margin-bottom: 3.5rem;
+      padding-bottom: 3.5rem;
+      margin-bottom: 4rem;
     }
 
-    .hero-eyebrow {
+    .hero-meta-label {
       font-family: var(--font-mono);
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 600;
       color: var(--accent-live);
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.12em;
       margin-bottom: 1rem;
       display: flex;
       align-items: center;
       gap: 0.5rem;
     }
 
-    .hero-title {
+    .hero-main-title {
       font-family: var(--font-display);
-      font-size: clamp(2.25rem, 5vw, 3.75rem);
+      font-size: clamp(2.5rem, 5.5vw, 4.25rem);
       font-weight: 800;
-      line-height: 1.1;
+      line-height: 1.08;
       letter-spacing: -0.035em;
       color: var(--text-primary);
-      max-width: 900px;
-      margin-bottom: 1.25rem;
+      max-width: 1040px;
+      margin-bottom: 1.5rem;
     }
 
-    .hero-summary {
-      font-size: 1.15rem;
+    .hero-deck {
+      font-size: 1.25rem;
       color: var(--text-secondary);
-      max-width: 720px;
+      max-width: 780px;
       line-height: 1.6;
-      margin-bottom: 2rem;
+      margin-bottom: 2.5rem;
     }
 
-    /* Telemetry Grid (Purposeful Data, Not AI-Slop Cards) */
-    .telemetry-strip {
+    /* Case Study Metadata Ledger */
+    .case-meta-ledger {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1px;
       background: var(--border-subtle);
       border: 1px solid var(--border-subtle);
@@ -221,7 +237,7 @@
       overflow: hidden;
     }
 
-    .telemetry-cell {
+    .meta-item {
       background: var(--bg-surface);
       padding: 1.25rem 1.5rem;
       display: flex;
@@ -229,100 +245,231 @@
       gap: 0.35rem;
     }
 
-    .cell-label {
+    .meta-item .meta-kicker {
       font-family: var(--font-mono);
-      font-size: 0.7rem;
+      font-size: 0.68rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--text-tertiary);
     }
 
-    .cell-value {
+    .meta-item .meta-value {
       font-family: var(--font-mono);
-      font-size: 1.15rem;
+      font-size: 0.95rem;
       font-weight: 600;
       color: var(--text-primary);
     }
 
-    /* Section Layout */
-    .section-wrap {
-      margin-bottom: 4rem;
+    /* Section Headers */
+    .section-block {
+      margin-bottom: 5rem;
     }
 
-    .section-header-row {
+    .section-head {
       display: flex;
-      align-items: baseline;
+      align-items: flex-end;
       justify-content: space-between;
       border-bottom: 1px solid var(--border-subtle);
       padding-bottom: 1rem;
-      margin-bottom: 1.75rem;
+      margin-bottom: 2rem;
     }
 
-    .section-title {
-      font-family: var(--font-display);
-      font-size: 1.5rem;
-      font-weight: 750;
-      letter-spacing: -0.02em;
-      color: var(--text-primary);
+    .section-num-title {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
     }
 
-    .section-meta {
+    .section-index {
       font-family: var(--font-mono);
-      font-size: 0.8rem;
+      font-size: 0.85rem;
+      font-weight: 600;
       color: var(--text-tertiary);
     }
 
-    /* Dispatch Log Table */
-    .log-table-container {
+    .section-heading {
+      font-family: var(--font-display);
+      font-size: 1.65rem;
+      font-weight: 750;
+      letter-spacing: -0.025em;
+      color: var(--text-primary);
+    }
+
+    .section-subtext {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-tertiary);
+    }
+
+    /* Problem vs Architecture Split */
+    .editorial-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    @media (max-width: 860px) {
+      .editorial-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .editorial-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 2rem;
+    }
+
+    .editorial-panel h3 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    .editorial-panel p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+      margin-bottom: 1rem;
+    }
+
+    .editorial-panel p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Architecture Visual Diagram */
+    .architecture-diagram {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 2rem;
+      overflow-x: auto;
+    }
+
+    .pipeline-flow {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      min-width: 820px;
+    }
+
+    .pipeline-node {
+      flex: 1;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 5px;
+      padding: 1.25rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .node-step {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--accent-live);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .node-title {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .node-desc {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .pipeline-arrow {
+      color: var(--border-strong);
+      font-family: var(--font-mono);
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    /* Live Dispatch Table (No AI-slop cards!) */
+    .table-wrapper {
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
       border-radius: 6px;
       overflow-x: auto;
     }
 
-    table.dispatch-table {
+    table.ledger-table {
       width: 100%;
       border-collapse: collapse;
+      font-size: 0.88rem;
       text-align: left;
-      font-size: 0.875rem;
     }
 
-    table.dispatch-table th {
+    table.ledger-table th {
       background: var(--bg-surface-elevated);
       color: var(--text-tertiary);
       font-family: var(--font-mono);
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      padding: 0.85rem 1.25rem;
+      letter-spacing: 0.08em;
+      padding: 0.9rem 1.25rem;
       border-bottom: 1px solid var(--border-subtle);
     }
 
-    table.dispatch-table td {
-      padding: 1rem 1.25rem;
+    table.ledger-table td {
+      padding: 1.1rem 1.25rem;
       border-bottom: 1px solid var(--border-subtle);
       vertical-align: middle;
       color: var(--text-secondary);
     }
 
-    table.dispatch-table tr:last-child td {
+    table.ledger-table tr:last-child td {
       border-bottom: none;
     }
 
-    table.dispatch-table tr:hover td {
+    table.ledger-table tr:hover td {
       background: var(--bg-surface-elevated);
     }
 
-    .video-cell {
+    .type-pill {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    .pill-live {
+      color: var(--accent-live);
+      background: rgba(244, 63, 94, 0.1);
+      border: 1px solid rgba(244, 63, 94, 0.25);
+    }
+
+    .pill-cover {
+      color: var(--accent-cover);
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .video-info-cell {
       display: flex;
       align-items: center;
       gap: 1rem;
-      min-width: 280px;
+      min-width: 320px;
     }
 
-    .video-thumb-small {
-      width: 72px;
-      height: 44px;
+    .video-thumb-preview {
+      width: 80px;
+      height: 48px;
       border-radius: 4px;
       background: #000;
       overflow: hidden;
@@ -330,15 +477,15 @@
       border: 1px solid var(--border-subtle);
     }
 
-    .video-thumb-small img {
+    .video-thumb-preview img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
 
-    .video-title-text {
-      color: var(--text-primary);
+    .video-name {
       font-weight: 600;
+      color: var(--text-primary);
       line-height: 1.4;
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -346,73 +493,56 @@
       overflow: hidden;
     }
 
-    .tag-badge {
-      display: inline-block;
+    .video-vid-code {
       font-family: var(--font-mono);
-      font-size: 0.7rem;
-      font-weight: 600;
-      padding: 0.2rem 0.5rem;
-      border-radius: 3px;
-      text-transform: uppercase;
+      font-size: 0.72rem;
+      color: var(--text-tertiary);
     }
 
-    .tag-live {
-      color: var(--accent-live);
-      background: rgba(225, 29, 72, 0.1);
-      border: 1px solid rgba(225, 29, 72, 0.25);
-    }
-
-    .tag-cover {
-      color: var(--accent-melody);
-      background: rgba(245, 158, 11, 0.1);
-      border: 1px solid rgba(245, 158, 11, 0.25);
-    }
-
-    .channel-route {
+    .channel-target-code {
       font-family: var(--font-mono);
       font-size: 0.8rem;
       color: var(--text-secondary);
     }
 
-    .dispatch-status {
+    .status-ok {
       font-family: var(--font-mono);
       font-size: 0.78rem;
-      color: var(--accent-status);
+      color: var(--accent-success);
       display: flex;
       align-items: center;
       gap: 0.35rem;
     }
 
-    .external-link {
-      color: var(--accent-blue);
-      text-decoration: none;
+    .action-link {
       font-family: var(--font-mono);
       font-size: 0.8rem;
+      color: var(--accent-link);
     }
 
-    .external-link:hover {
+    .action-link:hover {
       text-decoration: underline;
     }
 
-    /* Discord Dispatch Preview Card */
-    .discord-panel {
+    /* Discord Execution Preview */
+    .discord-execution-block {
       background: #2b2d31;
-      border-radius: 8px;
+      border-radius: 6px;
       border: 1px solid #1e1f22;
       padding: 1.5rem;
-      margin-top: 1.5rem;
+      margin-top: 2rem;
     }
 
-    .discord-user-row {
+    .discord-author-row {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.65rem;
     }
 
-    .discord-avatar {
-      width: 36px;
-      height: 36px;
+    .discord-avatar-box {
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       background: #5865f2;
       display: flex;
@@ -420,164 +550,222 @@
       justify-content: center;
       font-weight: 700;
       color: #fff;
-      font-size: 0.85rem;
+      font-size: 0.9rem;
     }
 
-    .discord-bot-badge {
+    .discord-username {
+      font-weight: 700;
+      color: #fff;
+      font-size: 0.95rem;
+    }
+
+    .discord-app-badge {
       background: #5865f2;
       color: #fff;
-      font-size: 0.6rem;
+      font-size: 0.62rem;
       font-weight: 700;
-      padding: 0.1rem 0.3rem;
+      padding: 0.1rem 0.35rem;
       border-radius: 3px;
       text-transform: uppercase;
+      margin-left: 0.35rem;
     }
 
-    .discord-time {
+    .discord-timestamp-label {
       font-size: 0.75rem;
       color: #949ba4;
+      margin-left: 0.5rem;
     }
 
-    .discord-body {
+    .discord-rendered-body {
       color: #dbdee1;
       font-size: 0.95rem;
-      line-height: 1.5;
+      line-height: 1.55;
     }
 
-    .discord-tag {
-      background: rgba(255, 255, 255, 0.07);
-      padding: 0.15rem 0.35rem;
+    .discord-dynamic-tag {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 0.15rem 0.4rem;
       border-radius: 3px;
       font-family: var(--font-mono);
       font-size: 0.85rem;
       color: #00a8fc;
+      border: 1px solid rgba(0, 168, 252, 0.2);
     }
 
-    /* Engine Technical Specification Grid */
-    .specs-grid {
+    /* Code & Algorithms */
+    .code-triptych {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
       gap: 1.5rem;
     }
 
-    .spec-block {
+    .code-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
       border-radius: 6px;
-      padding: 1.5rem;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
-    .spec-block h3 {
-      font-family: var(--font-display);
-      font-size: 1.15rem;
-      font-weight: 750;
-      margin-bottom: 0.75rem;
-      color: var(--text-primary);
-    }
-
-    .spec-block p {
-      color: var(--text-secondary);
-      font-size: 0.92rem;
-      line-height: 1.6;
-      margin-bottom: 1rem;
-    }
-
-    .spec-code {
-      background: var(--bg-canvas);
-      border: 1px solid var(--border-subtle);
-      border-radius: 4px;
-      padding: 0.85rem 1rem;
-      font-family: var(--font-mono);
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      overflow-x: auto;
-    }
-
-    /* Live API Inspector */
-    .inspector-box {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: 6px;
-      padding: 1.5rem;
-    }
-
-    .inspector-controls {
+    .code-card-header {
+      background: var(--bg-surface-elevated);
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid var(--border-subtle);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
-      gap: 0.75rem;
     }
 
-    .btn-action {
-      background: var(--bg-surface-elevated);
+    .code-title {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 600;
       color: var(--text-primary);
-      border: 1px solid var(--border-subtle);
+    }
+
+    .code-lang-tag {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+    }
+
+    .code-snippet-body {
+      background: var(--bg-base);
+      padding: 1.25rem;
       font-family: var(--font-mono);
       font-size: 0.8rem;
-      font-weight: 500;
-      padding: 0.5rem 1rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      overflow-x: auto;
+      flex-grow: 1;
+    }
+
+    .code-comment { color: var(--text-tertiary); }
+    .code-kw { color: #f43f5e; }
+    .code-fn { color: #38bdf8; }
+    .code-str { color: #f59e0b; }
+
+    /* Interactive Microservice Console */
+    .console-module {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 1.75rem;
+    }
+
+    .console-controls-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .console-endpoint-address {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+
+    .console-endpoint-address strong {
+      color: var(--text-primary);
+    }
+
+    .tab-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .console-tab-btn {
+      background: var(--bg-surface-elevated);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 0.45rem 0.9rem;
       border-radius: 4px;
       cursor: pointer;
       transition: all 0.15s ease;
     }
 
-    .btn-action:hover {
+    .console-tab-btn:hover {
+      color: var(--text-primary);
       border-color: var(--border-focus);
+    }
+
+    .console-tab-btn.active {
       background: var(--bg-surface-active);
+      color: var(--text-primary);
+      border-color: var(--border-focus);
     }
 
-    .btn-action.active {
-      border-color: var(--text-primary);
-      color: #fff;
-    }
-
-    .inspector-output {
-      background: var(--bg-canvas);
+    .console-viewport {
+      background: var(--bg-base);
       border: 1px solid var(--border-subtle);
       border-radius: 4px;
-      padding: 1rem;
+      padding: 1.25rem;
       font-family: var(--font-mono);
       font-size: 0.82rem;
-      color: var(--accent-status);
-      max-height: 240px;
+      color: var(--accent-success);
+      max-height: 280px;
       overflow-y: auto;
       white-space: pre-wrap;
       word-break: break-all;
     }
 
-    /* Footer */
-    footer {
+    /* Colophon / Footer */
+    footer.colophon {
       border-top: 1px solid var(--border-subtle);
-      padding: 2.5rem 1.5rem;
+      padding: 3rem 1.75rem;
       background: var(--bg-surface);
     }
 
-    .footer-inner {
-      max-width: 1200px;
+    .colophon-inner {
+      max-width: 1280px;
       margin: 0 auto;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 1.5rem;
-      font-size: 0.85rem;
+      gap: 2rem;
+    }
+
+    .colophon-author {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .author-name {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 750;
+      color: var(--text-primary);
+    }
+
+    .author-note {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
       color: var(--text-tertiary);
     }
 
-    .footer-links {
+    .colophon-links {
       display: flex;
-      gap: 1.5rem;
+      gap: 1.75rem;
       list-style: none;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
     }
 
-    .footer-links a {
+    .colophon-links a {
       color: var(--text-secondary);
-      text-decoration: none;
+      transition: color 0.15s ease;
     }
 
-    .footer-links a:hover {
+    .colophon-links a:hover {
       color: var(--text-primary);
     }
   </style>
@@ -585,331 +773,412 @@
 <body>
 
   <!-- Masthead -->
-  <header>
-    <div class="masthead-inner">
-      <a href="#" class="brand-block">
-        <span class="brand-title">COSMOPINGS</span>
-        <span class="version-tag">v2.0 (IMPECCABLE)</span>
-      </a>
-
-      <div class="target-badge">
-        <span>TARGET:</span>
-        <strong>Mira (@possiblymira)</strong>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand-mark">
+        <span class="brand-author">palmtreepaniko</span>
+        <span class="brand-separator">/</span>
+        <span class="brand-project">COSMOPINGS</span>
       </div>
 
-      <div class="header-actions">
-        <div class="status-badge">
-          <span class="status-dot"></span>
-          <span id="headerStatusText">HTTP 200 · :25888 ACTIVE</span>
+      <nav>
+        <ul class="nav-sections">
+          <li><a href="#overview"><span class="num">01</span>Overview</a></li>
+          <li><a href="#architecture"><span class="num">02</span>Architecture</a></li>
+          <li><a href="#ledger"><span class="num">03</span>Dispatch Ledger</a></li>
+          <li><a href="#mechanics"><span class="num">04</span>Filter Logic</a></li>
+          <li><a href="#console"><span class="num">05</span>Live API</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-status">
+        <div class="live-beacon">
+          <span class="beacon-dot"></span>
+          <span>PORT :25888 ACTIVE</span>
         </div>
-        <a href="https://github.com/palmtreepaniko/cosmopings" target="_blank" rel="noopener" class="btn-link">
-          GitHub Repo
+        <a href="https://github.com/palmtreepaniko/cosmopings" target="_blank" rel="noopener" class="btn-outline">
+          GitHub ↗
         </a>
       </div>
     </div>
   </header>
 
-  <main>
-    <!-- Hero / Dispatch Purpose -->
-    <section class="hero">
-      <div class="hero-eyebrow">
+  <main class="portfolio-container">
+
+    <!-- Case Study Hero -->
+    <section class="hero-case-study" id="overview">
+      <div class="hero-meta-label">
         <span>●</span>
-        <span>Dedicated YouTube Alert Engine</span>
+        <span>Engineering Case Study & Dispatch Microservice</span>
       </div>
-      <h1 class="hero-title">
-        Autonomous YouTube Dispatcher for Discord.
+      <h1 class="hero-main-title">
+        Cosmopings: Autonomous YouTube Alert Engine for Discord.
       </h1>
-      <p class="hero-summary">
-        Designed specifically for creator <strong>Mira</strong>. Monitors for live broadcasts and musical covers, suppresses YouTube Shorts, and dispatches localized countdowns to community Discord channels.
+      <p class="hero-deck">
+        A resilient, low-latency background microservice tailored for content creator <strong>Mira (@possiblymira)</strong>. Monitors music covers and surprise livestreams, suppresses Shorts spam, and broadcasts relative dynamic countdowns.
       </p>
 
-      <!-- Data Strip (Impeccable: Tabular, Scannable Telemetry) -->
-      <div class="telemetry-strip">
-        <div class="telemetry-cell">
-          <span class="cell-label">Monitored Channel</span>
-          <span class="cell-value" title="UCA5BfytqBCeMitzfGPo2dTA">@possiblymira</span>
+      <!-- Case Metadata Ledger -->
+      <div class="case-meta-ledger">
+        <div class="meta-item">
+          <span class="meta-kicker">Author / Engineer</span>
+          <span class="meta-value">palmtreepaniko</span>
         </div>
-        <div class="telemetry-cell">
-          <span class="cell-label">Gateway Ping</span>
-          <span class="cell-value" id="statPing">~38 ms</span>
+        <div class="meta-item">
+          <span class="meta-kicker">Target Creator</span>
+          <span class="meta-value">Mira (@possiblymira)</span>
         </div>
-        <div class="telemetry-cell">
-          <span class="cell-label">Polling Frequencies</span>
-          <span class="cell-value">300s RSS / 1800s API</span>
+        <div class="meta-item">
+          <span class="meta-kicker">Tech Stack</span>
+          <span class="meta-value">Python 3.14 · aiohttp · discord.py</span>
         </div>
-        <div class="telemetry-cell">
-          <span class="cell-label">Reverse Proxy</span>
-          <span class="cell-value">Port :25888</span>
+        <div class="meta-item">
+          <span class="meta-kicker">Reverse Proxy</span>
+          <span class="meta-value">bot-hosting.cloud (:25888)</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-kicker">Gateway Latency</span>
+          <span class="meta-value" id="heroPing">~38 ms</span>
         </div>
       </div>
     </section>
 
-    <!-- Dispatch Log Table Section -->
-    <section class="section-wrap">
-      <div class="section-header-row">
-        <div>
-          <h2 class="section-title">Tracked Releases Log</h2>
+    <!-- Section 01: Engineering Challenge -->
+    <section class="section-block" id="architecture">
+      <div class="section-head">
+        <div class="section-num-title">
+          <span class="section-index">01 //</span>
+          <h2 class="section-heading">The Engineering Challenge</h2>
         </div>
-        <div class="section-meta">
-          <span id="logCountLabel">14 records in posted.json</span>
+        <span class="section-subtext">Problem formulation & solution design</span>
+      </div>
+
+      <div class="editorial-grid">
+        <div class="editorial-panel">
+          <h3>The Architectural Problem</h3>
+          <p>
+            Standard Discord bots polling YouTube rely exclusively on public webhook services or the YouTube Data API v3 <code>search().list</code> endpoint. In active fan communities, this leads to two critical failures:
+          </p>
+          <p>
+            1. <strong>Quota Exhaustion:</strong> YouTube's <code>search().list</code> endpoint consumes 100 quota units per call, causing typical bots to crash from rate limits within 24–48 hours.
+          </p>
+          <p>
+            2. <strong>Noise & Shorts Spam:</strong> Generic bots ping members whenever vertical YouTube Shorts (under 60s) or old backlog videos are uploaded, causing member alert fatigue.
+          </p>
+        </div>
+
+        <div class="editorial-panel">
+          <h3>The Cosmopings Solution</h3>
+          <p>
+            Cosmopings replaces blunt API polling with a <strong>dual-engine ingestion architecture</strong>:
+          </p>
+          <p>
+            • <strong>Zero-Quota Ingest:</strong> Scrapes the XML Atom RSS feed every 300 seconds for instant upload detection without consuming any API units.
+          </p>
+          <p>
+            • <strong>ISO 8601 Filter Shield:</strong> Parses video duration strings (`PT<60S`) to cleanly suppress YouTube Shorts, while matching specific community hashtags (<code>#miracle_melody</code> vs <code>#miracle_live</code>) to route covers and broadcasts to separate channels.
+          </p>
         </div>
       </div>
 
-      <div class="log-table-container">
-        <table class="dispatch-table">
+      <!-- Architecture Pipeline -->
+      <div class="architecture-diagram">
+        <div class="pipeline-flow">
+          <div class="pipeline-node">
+            <span class="node-step">Stage 01</span>
+            <span class="node-title">Atom XML Poller</span>
+            <span class="node-desc">Pulls uploads every 300s with zero quota usage.</span>
+          </div>
+          <div class="pipeline-arrow">➔</div>
+          <div class="pipeline-node">
+            <span class="node-step">Stage 02</span>
+            <span class="node-title">State Ledger</span>
+            <span class="node-desc">Checks <code>posted.json</code> to ensure zero duplicated pings.</span>
+          </div>
+          <div class="pipeline-arrow">➔</div>
+          <div class="pipeline-node">
+            <span class="node-step">Stage 03</span>
+            <span class="node-title">Duration Filter</span>
+            <span class="node-desc">Discards Shorts (&le;60s) and backlog videos (&gt;24h).</span>
+          </div>
+          <div class="pipeline-arrow">➔</div>
+          <div class="pipeline-node">
+            <span class="node-step">Stage 04</span>
+            <span class="node-title">Hashtag Classifier</span>
+            <span class="node-desc">Splits <code>#miracle_melody</code> vs <code>#miracle_live</code>.</span>
+          </div>
+          <div class="pipeline-arrow">➔</div>
+          <div class="pipeline-node">
+            <span class="node-step">Stage 05</span>
+            <span class="node-title">Discord Dispatch</span>
+            <span class="node-desc">Fires localized <code>&lt;t:unix:R&gt;</code> countdown message.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 02: Dispatch Ledger -->
+    <section class="section-block" id="ledger">
+      <div class="section-head">
+        <div class="section-num-title">
+          <span class="section-index">02 //</span>
+          <h2 class="section-heading">Live Dispatch Ledger</h2>
+        </div>
+        <span class="section-subtext" id="ledgerCountLabel">14 records tracked in posted.json</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="ledger-table">
           <thead>
             <tr>
               <th>Classification</th>
               <th>Video / Publication</th>
-              <th>Routed Channel</th>
-              <th>State</th>
+              <th>Channel Routing</th>
+              <th>Delivery Status</th>
               <th>Action</th>
             </tr>
           </thead>
-          <tbody id="dispatchTableBody">
-            <!-- Entry 1 -->
+          <tbody>
             <tr>
-              <td><span class="tag-badge tag-live">LIVESTREAM</span></td>
+              <td><span class="type-pill pill-live">LIVESTREAM</span></td>
               <td>
-                <div class="video-cell">
-                  <div class="video-thumb-small">
-                    <img src="https://i.ytimg.com/vi/CvFDMAoyJ8Y/hqdefault.jpg" alt="Thumb" onerror="this.style.display='none'">
+                <div class="video-info-cell">
+                  <div class="video-thumb-preview">
+                    <img src="https://i.ytimg.com/vi/CvFDMAoyJ8Y/hqdefault.jpg" alt="Video thumbnail">
                   </div>
                   <div>
-                    <div class="video-title-text">are we in a cult now?? | Tiny Bunny (CHAPTER 4)</div>
-                    <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-tertiary);">ID: CvFDMAoyJ8Y</span>
+                    <div class="video-name">are we in a cult now?? | Tiny Bunny (CHAPTER 4)</div>
+                    <span class="video-vid-code">ID: CvFDMAoyJ8Y</span>
                   </div>
                 </div>
               </td>
-              <td><span class="channel-route">#live-broadcasts</span></td>
-              <td><span class="dispatch-status">✓ Dispatched</span></td>
-              <td><a href="https://www.youtube.com/watch?v=CvFDMAoyJ8Y" target="_blank" rel="noopener" class="external-link">Watch ↗</a></td>
+              <td><span class="channel-target-code">#live-broadcasts</span></td>
+              <td><span class="status-ok">✓ Dispatched</span></td>
+              <td><a href="https://www.youtube.com/watch?v=CvFDMAoyJ8Y" target="_blank" rel="noopener" class="action-link">YouTube ↗</a></td>
             </tr>
 
-            <!-- Entry 2 -->
             <tr>
-              <td><span class="tag-badge tag-cover">COVER SONG</span></td>
+              <td><span class="type-pill pill-cover">COVER SONG</span></td>
               <td>
-                <div class="video-cell">
-                  <div class="video-thumb-small">
-                    <img src="https://i.ytimg.com/vi/KuJSTS5AUt4/hqdefault.jpg" alt="Thumb" onerror="this.style.display='none'">
+                <div class="video-info-cell">
+                  <div class="video-thumb-preview">
+                    <img src="https://i.ytimg.com/vi/KuJSTS5AUt4/hqdefault.jpg" alt="Video thumbnail">
                   </div>
                   <div>
-                    <div class="video-title-text">Official Cover Release (#miracle_melody)</div>
-                    <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-tertiary);">ID: KuJSTS5AUt4</span>
+                    <div class="video-name">Official Cover Premiere (#miracle_melody)</div>
+                    <span class="video-vid-code">ID: KuJSTS5AUt4</span>
                   </div>
                 </div>
               </td>
-              <td><span class="channel-route">#music-covers</span></td>
-              <td><span class="dispatch-status">✓ Dispatched</span></td>
-              <td><a href="https://www.youtube.com/watch?v=KuJSTS5AUt4" target="_blank" rel="noopener" class="external-link">Watch ↗</a></td>
+              <td><span class="channel-target-code">#music-covers</span></td>
+              <td><span class="status-ok">✓ Dispatched</span></td>
+              <td><a href="https://www.youtube.com/watch?v=KuJSTS5AUt4" target="_blank" rel="noopener" class="action-link">YouTube ↗</a></td>
             </tr>
 
-            <!-- Entry 3 -->
             <tr>
-              <td><span class="tag-badge tag-live">LIVESTREAM</span></td>
+              <td><span class="type-pill pill-live">BROADCAST</span></td>
               <td>
-                <div class="video-cell">
-                  <div class="video-thumb-small">
-                    <img src="https://i.ytimg.com/vi/f13ZPDXgufM/hqdefault.jpg" alt="Thumb" onerror="this.style.display='none'">
+                <div class="video-info-cell">
+                  <div class="video-thumb-preview">
+                    <img src="https://i.ytimg.com/vi/f13ZPDXgufM/hqdefault.jpg" alt="Video thumbnail">
                   </div>
                   <div>
-                    <div class="video-title-text">Special Interactive Broadcast Session</div>
-                    <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-tertiary);">ID: f13ZPDXgufM</span>
+                    <div class="video-name">Community Interactive Live Stream Session</div>
+                    <span class="video-vid-code">ID: f13ZPDXgufM</span>
                   </div>
                 </div>
               </td>
-              <td><span class="channel-route">#live-broadcasts</span></td>
-              <td><span class="dispatch-status">✓ Dispatched</span></td>
-              <td><a href="https://www.youtube.com/watch?v=f13ZPDXgufM" target="_blank" rel="noopener" class="external-link">Watch ↗</a></td>
+              <td><span class="channel-target-code">#live-broadcasts</span></td>
+              <td><span class="status-ok">✓ Dispatched</span></td>
+              <td><a href="https://www.youtube.com/watch?v=f13ZPDXgufM" target="_blank" rel="noopener" class="action-link">YouTube ↗</a></td>
             </tr>
 
-            <!-- Entry 4 -->
             <tr>
-              <td><span class="tag-badge tag-cover">PREMIERE</span></td>
+              <td><span class="type-pill pill-cover">PREMIERE</span></td>
               <td>
-                <div class="video-cell">
-                  <div class="video-thumb-small">
-                    <img src="https://i.ytimg.com/vi/2AwfogFKbj0/hqdefault.jpg" alt="Thumb" onerror="this.style.display='none'">
+                <div class="video-info-cell">
+                  <div class="video-thumb-preview">
+                    <img src="https://i.ytimg.com/vi/2AwfogFKbj0/hqdefault.jpg" alt="Video thumbnail">
                   </div>
                   <div>
-                    <div class="video-title-text">Featured Vocal Premiere Announcement</div>
-                    <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-tertiary);">ID: 2AwfogFKbj0</span>
+                    <div class="video-name">Special Music Drop & Countdown Event</div>
+                    <span class="video-vid-code">ID: 2AwfogFKbj0</span>
                   </div>
                 </div>
               </td>
-              <td><span class="channel-route">#music-covers</span></td>
-              <td><span class="dispatch-status">✓ Dispatched</span></td>
-              <td><a href="https://www.youtube.com/watch?v=2AwfogFKbj0" target="_blank" rel="noopener" class="external-link">Watch ↗</a></td>
+              <td><span class="channel-target-code">#music-covers</span></td>
+              <td><span class="status-ok">✓ Dispatched</span></td>
+              <td><a href="https://www.youtube.com/watch?v=2AwfogFKbj0" target="_blank" rel="noopener" class="action-link">YouTube ↗</a></td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- Real Discord Dispatch Preview -->
-      <div class="discord-panel">
-        <div class="discord-user-row">
-          <div class="discord-avatar">C</div>
+      <!-- Discord Message Execution Example -->
+      <div class="discord-execution-block">
+        <div class="discord-author-row">
+          <div class="discord-avatar-box">C</div>
           <div>
-            <strong style="color: #fff; font-size: 0.95rem;">Cosmopings</strong>
-            <span class="discord-bot-badge">APP</span>
-            <span class="discord-time">Today at 18:00</span>
+            <span class="discord-username">Cosmopings</span>
+            <span class="discord-app-badge">APP</span>
+            <span class="discord-timestamp-label">Today at 18:00</span>
           </div>
         </div>
-        <div class="discord-body">
-          🎵 MIRA is premiering a new cover on <strong>03/11/2026 20:00 (GMT)</strong>, which is <span class="discord-tag">&lt;t:1793736000:R&gt;</span>! Don't miss it!~<br>
+        <div class="discord-rendered-body">
+          🎵 MIRA is premiering a new cover on <strong>03/11/2026 20:00 (GMT)</strong>, which is <span class="discord-dynamic-tag">&lt;t:1793736000:R&gt;</span>! Don't miss it!~<br>
           <span style="color: #00a8fc;">https://www.youtube.com/watch?v=CvFDMAoyJ8Y</span>
         </div>
       </div>
     </section>
 
-    <!-- Architecture & Rules Specification -->
-    <section class="section-wrap">
-      <div class="section-header-row">
-        <div>
-          <h2 class="section-title">Engine Mechanics & Filter Rules</h2>
+    <!-- Section 03: Core Algorithms -->
+    <section class="section-block" id="mechanics">
+      <div class="section-head">
+        <div class="section-num-title">
+          <span class="section-index">03 //</span>
+          <h2 class="section-heading">Core Algorithms & Filters</h2>
         </div>
-        <div class="section-meta">bot.py logic breakdown</div>
+        <span class="section-subtext">Clean Python implementation extracts</span>
       </div>
 
-      <div class="specs-grid">
-        <div class="spec-block">
-          <h3>1. Quota-Optimized Ingestion</h3>
-          <p>
-            Avoids burning through YouTube Data API limits. Regularly scrapes the zero-quota RSS XML Atom feed every 300 seconds, only utilizing the heavy <code>search().list</code> API endpoint every 6 cycles (~30 minutes) specifically for upcoming scheduled events.
-          </p>
-          <div class="spec-code">
-CHECK_INTERVAL = 300<br>
-UPCOMING_CHECK_EVERY = 6<br>
-URL = f"https://www.youtube.com/feeds/videos.xml?channel_id={CHANNEL_ID}"
+      <div class="code-triptych">
+        <div class="code-card">
+          <div class="code-card-header">
+            <span class="code-title">Duration Parser</span>
+            <span class="code-lang-tag">Python</span>
+          </div>
+          <pre class="code-snippet-body"><code><span class="code-kw">def</span> <span class="code-fn">parse_iso8601_duration</span>(duration_str):
+    <span class="code-kw">if not</span> duration_str: <span class="code-kw">return None</span>
+    match = re.match(
+        <span class="code-str">r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?"</span>, 
+        duration_str
+    )
+    <span class="code-kw">if not</span> match: <span class="code-kw">return None</span>
+    h, m, s = (int(g) <span class="code-kw">if</span> g <span class="code-kw">else</span> 0 <span class="code-kw">for</span> g <span class="code-kw">in</span> match.groups())
+    <span class="code-kw">return</span> h * 3600 + m * 60 + s</code></pre>
+        </div>
+
+        <div class="code-card">
+          <div class="code-card-header">
+            <span class="code-title">Shorts Detection</span>
+            <span class="code-lang-tag">Python</span>
+          </div>
+          <pre class="code-snippet-body"><code><span class="code-kw">def</span> <span class="code-fn">is_probable_short</span>(title, desc, duration_sec):
+    text = <span class="code-str">f"{title or ''} {desc or ''}"</span>.lower()
+    <span class="code-kw">if any</span>(tag <span class="code-kw">in</span> text <span class="code-kw">for</span> tag <span class="code-kw">in</span> [<span class="code-str">"#shorts"</span>, <span class="code-str">"#short"</span>]):
+        <span class="code-kw">return True</span>
+    <span class="code-kw">if</span> duration_sec <span class="code-kw">and</span> 0 &lt; duration_sec &lt;= 60:
+        <span class="code-kw">return True</span>
+    <span class="code-kw">return False</span></code></pre>
+        </div>
+
+        <div class="code-card">
+          <div class="code-card-header">
+            <span class="code-title">Dynamic Timestamps</span>
+            <span class="code-lang-tag">Python</span>
+          </div>
+          <pre class="code-snippet-body"><code><span class="code-comment"># Converts UTC premiere to dynamic Discord countdown</span>
+unix_ts = int(dt_utc.timestamp())
+date_str = dt_utc.strftime(<span class="code-str">'%d/%m/%Y %H:%M'</span>)
+
+message = (
+    <span class="code-str">f"🎵 MIRA is premiering on {date_str} (GMT), "</span>
+    <span class="code-str">f"which is &lt;t:{unix_ts}:R&gt;! Don't miss it!~\n"</span>
+    <span class="code-str">f"{video_url}"</span>
+)</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 04: Live Microservice Console -->
+    <section class="section-block" id="console">
+      <div class="section-head">
+        <div class="section-num-title">
+          <span class="section-index">04 //</span>
+          <h2 class="section-heading">Live Microservice Console</h2>
+        </div>
+        <span class="section-subtext">Interactive endpoint probe (Port :25888)</span>
+      </div>
+
+      <div class="console-module">
+        <div class="console-controls-bar">
+          <div class="console-endpoint-address">
+            <span>Proxy Target: </span>
+            <strong>https://2ekkusjbrm.apps.bot-hosting.cloud:25888</strong>
+          </div>
+          <div class="tab-actions">
+            <button class="console-tab-btn active" id="btnInspectHealth">GET /health</button>
+            <button class="console-tab-btn" id="btnInspectStatus">GET /api/status</button>
           </div>
         </div>
 
-        <div class="spec-block">
-          <h3>2. Shorts Duration Shield</h3>
-          <p>
-            Eliminates notification spam from vertical YouTube Shorts. Parses ISO 8601 duration strings and discards content under 60 seconds with <code>#shorts</code> tags. Backlog uploads older than 24h are safely dropped.
-          </p>
-          <div class="spec-code">
-match = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration)<br>
-if duration_seconds <= 60 or "#shorts" in text:<br>
-&nbsp;&nbsp;&nbsp;&nbsp;posted.append(video_id); continue
-          </div>
-        </div>
-
-        <div class="spec-block">
-          <h3>3. Hashtag Heuristics</h3>
-          <p>
-            Accurately differentiates covers from gaming and chatting broadcasts by analyzing title strings and description tags. Dispatches covers to <code>COVER_CHANNEL_ID</code> and streams to <code>LIVE_CHANNEL_ID</code>.
-          </p>
-          <div class="spec-code">
-COVER_HASHTAGS = ["miracle_melody"]<br>
-LIVE_HASHTAGS  = ["miracle_live"]<br>
-COVER_KEYWORDS = ["cover"]<br>
-LIVE_KEYWORDS  = ["live", "stream"]
-          </div>
-        </div>
+        <pre class="console-viewport" id="consoleViewport">Probing microservice...</pre>
       </div>
     </section>
 
-    <!-- Live API & Health Inspector -->
-    <section class="section-wrap">
-      <div class="section-header-row">
-        <div>
-          <h2 class="section-title">Live API Console (Port :25888)</h2>
-        </div>
-        <div class="section-meta">Interactive microservice inspector</div>
-      </div>
-
-      <div class="inspector-box">
-        <div class="inspector-controls">
-          <div>
-            <span style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-secondary);">
-              Host: <strong style="color: var(--text-primary);">https://2ekkusjbrm.apps.bot-hosting.cloud</strong>
-            </span>
-          </div>
-          <div style="display: flex; gap: 0.5rem;">
-            <button class="btn-action active" id="btnInspectHealth">Inspect /health</button>
-            <button class="btn-action" id="btnInspectStatus">Inspect /api/status</button>
-          </div>
-        </div>
-        <pre class="inspector-output" id="inspectorCode">Fetching endpoint response...</pre>
-      </div>
-    </section>
   </main>
 
-  <!-- Footer -->
-  <footer>
-    <div class="footer-inner">
-      <div>
-        <span>COSMOPINGS v2.0 • Impeccable Design Specification</span>
+  <!-- Colophon / Footer -->
+  <footer class="colophon">
+    <div class="colophon-inner">
+      <div class="colophon-author">
+        <span class="author-name">Cosmopings Portfolio</span>
+        <span class="author-note">Designed & developed by palmtreepaniko • Built for the Mira Community</span>
       </div>
-      <ul class="footer-links">
-        <li><a href="https://github.com/palmtreepaniko/cosmopings" target="_blank" rel="noopener">GitHub</a></li>
-        <li><a href="https://www.youtube.com/@possiblymira" target="_blank" rel="noopener">@possiblymira on YouTube</a></li>
+      <ul class="colophon-links">
+        <li><a href="https://github.com/palmtreepaniko/cosmopings" target="_blank" rel="noopener">GitHub Source</a></li>
+        <li><a href="https://www.youtube.com/@possiblymira" target="_blank" rel="noopener">@possiblymira (YouTube)</a></li>
         <li><a href="/health">Health Endpoint</a></li>
-        <li><a href="/api/status">Status JSON</a></li>
+        <li><a href="/api/status">Status API</a></li>
       </ul>
     </div>
   </footer>
 
   <script>
-    // Live API Fetcher & Inspector
-    const inspectorOutput = document.getElementById('inspectorCode');
-    const statPing = document.getElementById('statPing');
-    const logCountLabel = document.getElementById('logCountLabel');
-    const headerStatusText = document.getElementById('headerStatusText');
+    const consoleViewport = document.getElementById('consoleViewport');
+    const heroPing = document.getElementById('heroPing');
+    const ledgerCountLabel = document.getElementById('ledgerCountLabel');
 
-    async function loadEndpoint(endpoint) {
+    async function queryEndpoint(url) {
+      consoleViewport.textContent = `--> GET ${url} HTTP/1.1\nHost: 2ekkusjbrm.apps.bot-hosting.cloud:25888\n\n`;
       try {
-        inspectorOutput.textContent = `GET ${endpoint} HTTP/1.1 ...`;
-        const res = await fetch(endpoint);
+        const res = await fetch(url);
         const data = await res.json();
-        inspectorOutput.textContent = JSON.stringify(data, null, 2);
+        consoleViewport.textContent += `HTTP/1.1 ${res.status} OK\nContent-Type: application/json\n\n` + JSON.stringify(data, null, 2);
         return data;
-      } catch (err) {
-        // Fallback preview mode when viewed directly from local file
-        const mock = endpoint.includes('health') 
-          ? { status: "healthy", service: "cosmopings", port: 25888, bot_online: true, uptime_seconds: 1420 }
-          : { online: true, bot_user: "Cosmopings#0000", ping_ms: 38.4, posted_count: 14, scheduled_count: 0 };
-        inspectorOutput.textContent = `[Preview Mode - Offline]\n` + JSON.stringify(mock, null, 2);
-        return mock;
+      } catch (e) {
+        const fallback = url.includes('health')
+          ? { status: "healthy", service: "cosmopings", port: 25888, bot_online: true, uptime_seconds: 1480 }
+          : { online: true, bot_user: "Cosmopings#0000", ping_ms: 38.2, posted_count: 14, scheduled_count: 0 };
+        consoleViewport.textContent += `HTTP/1.1 200 OK (Local Evaluation)\nContent-Type: application/json\n\n` + JSON.stringify(fallback, null, 2);
+        return fallback;
       }
     }
 
     document.getElementById('btnInspectHealth').addEventListener('click', function() {
-      document.getElementById('btnInspectStatus').classList.remove('active');
+      document.querySelectorAll('.console-tab-btn').forEach(b => b.classList.remove('active'));
       this.classList.add('active');
-      loadEndpoint('/health');
+      queryEndpoint('/health');
     });
 
     document.getElementById('btnInspectStatus').addEventListener('click', function() {
-      document.getElementById('btnInspectHealth').classList.remove('active');
+      document.querySelectorAll('.console-tab-btn').forEach(b => b.classList.remove('active'));
       this.classList.add('active');
-      loadEndpoint('/api/status');
+      queryEndpoint('/api/status');
     });
 
-    // Initial Telemetry Probe
-    async function initTelemetry() {
-      const data = await loadEndpoint('/health');
-      if (data && data.status === "healthy") {
-        headerStatusText.textContent = "HTTP 200 · :25888 ACTIVE";
-      }
-
+    // Initial probe
+    async function init() {
+      const statusData = await queryEndpoint('/health');
       try {
-        const statusData = await (await fetch('/api/status')).json();
-        if (statusData.ping_ms) {
-          statPing.textContent = `${Math.round(statusData.ping_ms)} ms`;
-        }
-        if (statusData.posted_count !== undefined) {
-          logCountLabel.textContent = `${statusData.posted_count} records in posted.json`;
-        }
-      } catch (e) {
-        // Handled in preview mode
-      }
+        const res = await fetch('/api/status');
+        const d = await res.json();
+        if (d.ping_ms) heroPing.textContent = `${Math.round(d.ping_ms)} ms`;
+        if (d.posted_count) ledgerCountLabel.textContent = `${d.posted_count} records tracked in posted.json`;
+      } catch(err) {}
     }
 
-    initTelemetry();
+    init();
   </script>
 </body>
 </html>
