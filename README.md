@@ -1,12 +1,18 @@
-A Discord bot that monitors a YouTube channel and automatically notifies designated Discord channels when a new cover or livestream is published.
+# Cosmopings 🌌
+
+A specialized Discord bot that monitors a YouTube channel and automatically notifies designated Discord channels when a new cover or livestream is published.
+
+Includes a built-in portfolio and status web dashboard compatible with reverse proxy hosts (such as `bot-hosting.cloud`).
 
 ## Features
-- Polls the YouTube API and RSS feed every 5 minutes to detect new publications
-- Detects content type (cover vs. live) using keywords in the title and hashtags in the description
-- Posts premiere/scheduled stream announcements with Discord relative timestamps
-- Sends a follow-up notification when a scheduled event actually goes live
-- Handles unscheduled lives that start without prior announcement
-- Avoids duplicate notifications through persistent JSON tracking
+- **Dual-Engine Polling**: Blends fast YouTube RSS feeds with YouTube Data API v3 every 5 minutes to detect new publications without quota waste.
+- **Smart Content Classifier**: Distinguishes covers from gaming/chat streams using hashtags (`#miracle_melody` vs. `#miracle_live`) and keywords.
+- **Dynamic Localized Timestamps**: Posts premiere and scheduled stream announcements with native Discord relative countdowns (`<t:unix:R>`).
+- **Follow-up Live Alerts**: Automatically fires a "it's live now!" notification when a scheduled premiere starts.
+- **Unscheduled Stream Detection**: Catches surprise livestreams in real time.
+- **Spam & Shorts Filter**: Eliminates YouTube Shorts and backlog uploads older than 24h.
+- **Stateful JSON Deduplication**: Avoids duplicate notifications with persistent tracking (`posted.json`, `scheduled.json`).
+- **Embedded Web Server & Portfolio**: Native `aiohttp` web server running on port `25888` (or `PORT` env var) serving a cosmic showcase portfolio, live telemetry API (`/api/status`), and health check (`/health`).
 
 ## How it works
 | Event | Behavior |
@@ -16,65 +22,72 @@ A Discord bot that monitors a YouTube channel and automatically notifies designa
 | Premiere goes live | Sends a "it's live now" follow-up notification |
 | Unscheduled live | Detected and notified in real time |
 
-Content type is determined by:
-- Keywords in the title (e.g. cover, live, stream)
-- Hashtags in the description
+---
 
-## Installation
+## Web Server & Keep-Alive (Port 25888)
+
+When hosted on platforms like `bot-hosting.cloud`, the app provides a public HTTPS reverse proxy URL (e.g. `https://2ekkusjbrm.apps.bot-hosting.cloud` mapped to port `25888`).
+
+The bot automatically runs an asynchronous web server inside the event loop:
+- **`GET /`**: Cosmic showcase portfolio website.
+- **`GET /health`**: JSON health check for uptime monitors (e.g., [UptimeRobot](https://uptimerobot.com)) to keep your bot container alive 24/7.
+- **`GET /api/status`**: Live JSON telemetry (ping, uptime, videos tracked, upcoming schedule).
+
+---
+
+## Installation & Setup
+
 ### Requirements
 - Python 3.8+
 - A Discord bot token
 - A YouTube Data API v3 key
 
 ### Setup
-```
+```bash
 git clone https://github.com/palmtreepaniko/cosmopings
 cd cosmopings
 pip install -r requirements.txt
 ```
 
-### Environment variables
+### Environment Variables
 Create a `.env` file or set the following environment variables:
-```
+```env
 DISCORD_TOKEN=your_discord_bot_token
 YOUTUBE_API_KEY=your_youtube_api_key
+PORT=25888
 ```
 
 ### Configuration
-Edit the constants at the top of `bot.py` to match your setup:
-```
-CHANNEL_ID = "your_youtube_channel_id"
-COVER_CHANNEL_ID = 000000000000000000   # Discord channel ID for covers
-LIVE_CHANNEL_ID  = 000000000000000000   # Discord channel ID for lives
+Edit the constants at the top of `bot.py` to match your target YouTube channel and Discord channels:
+```python
+CHANNEL_ID = "UCA5BfytqBCeMitzfGPo2dTA" # Target YouTube Channel ID
+COVER_CHANNEL_ID = 000000000000000000    # Discord channel ID for covers
+LIVE_CHANNEL_ID  = 000000000000000000    # Discord channel ID for lives
 COVER_KEYWORDS = ["cover"]
 LIVE_KEYWORDS  = ["live", "stream", "livestream"]
-COVER_HASHTAGS = ["#your_cover_hashtag"]
-LIVE_HASHTAGS  = ["#your_live_hashtag"]
+COVER_HASHTAGS = ["miracle_melody"]
+LIVE_HASHTAGS  = ["miracle_live"]
 ```
 
-## Running the bot
-```
+## Running the Bot
+```bash
 python bot.py
 ```
 
-## File structure
+To test just the web server locally:
+```bash
+python web_server.py
+```
+
+## File Structure
 ```
 cosmopings/
-├── bot.py           
+├── bot.py           # Main Discord bot & scheduler
+├── web_server.py    # aiohttp web server & health endpoints
+├── web/
+│   └── index.html   # Cosmic portfolio landing page
 ├── posted.json      # Tracks already-notified videos
 ├── scheduled.json   # Tracks upcoming scheduled events
-└── requirements.txt
+├── requirements.txt # Project dependencies
+└── README.md
 ```
-
-## Dependencies
-- discord.py
-- google-api-python-client
-
-## Discord bot permissions
-Make sure your bot has the following permissions:
-- Send Messages
-- View Channels
-
-## Notes
-- The YouTube `search().list` endpoint (used for detecting upcoming streams) consumes more API quota. It runs every 6 cycles (~30 minutes) by default to stay within limits.
-- `posted.json` and `scheduled.json` are created automatically on first run.

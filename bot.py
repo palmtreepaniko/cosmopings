@@ -7,6 +7,7 @@ import os
 import re
 import xml.etree.ElementTree as ET
 import urllib.request
+from web_server import start_web
 
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
@@ -301,13 +302,29 @@ async def check_scheduled_start():
     except Exception as e:
         print(f"Error in check_scheduled_start: {e}")
 
+web_server_started = False
+
 @bot.event
 async def on_ready():
-    global uploads_playlist_id
+    global uploads_playlist_id, web_server_started
     print(f"Logged in as {bot.user}")
-    uploads_playlist_id = get_uploads_playlist()
-    print(f"Uploads playlist ID: {uploads_playlist_id}")
-    check_youtube.start()
-    check_scheduled_start.start()
+    try:
+        uploads_playlist_id = get_uploads_playlist()
+    
+    except Exception as e:
+        print(f"Failed to fetch uploads playlist: {e}")
+
+    if not web_server_started:
+        try:
+            port = int(os.getenv("PORT", 25888))
+            await start_web(bot=bot, port=port)
+            web_server_started = True
+        except Exception as e:
+            print(f"Failed to start web server: {e}")
+
+    if not check_youtube.is_running():
+        check_youtube.start()
+    if not check_scheduled_start.is_running():
+        check_scheduled_start.start()
 
 bot.run(DISCORD_TOKEN)

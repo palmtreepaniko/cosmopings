@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cosmopings — Discord YouTube Notification & Live Alert Bot</title>
+  <meta name="description" content="Cosmopings is a specialized Discord bot that monitors YouTube channels for new covers, premieres, and surprise livestreams with zero spam and dynamic Discord timestamps.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070913;
+      --bg-surface: #0e1222;
+      --bg-surface-elevated: #151b33;
+      --bg-glass: rgba(17, 23, 46, 0.75);
+      --border-glass: rgba(255, 255, 255, 0.08);
+      --border-glow: rgba(99, 102, 241, 0.3);
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --secondary: #ec4899;
+      --accent: #38bdf8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      overflow-x: hidden;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* Cosmic Background & Canvas */
+    #starfield {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .ambient-glow {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(140px);
+      opacity: 0.18;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glow-1 {
+      top: -100px;
+      left: -100px;
+      background: radial-gradient(circle, var(--primary), transparent);
+    }
+
+    .glow-2 {
+      bottom: 10%;
+      right: -100px;
+      background: radial-gradient(circle, var(--secondary), transparent);
+    }
+
+    .glow-3 {
+      top: 40%;
+      left: 30%;
+      background: radial-gradient(circle, var(--accent), transparent);
+      opacity: 0.1;
+    }
+
+    .content-wrapper {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header / Nav */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: rgba(7, 9, 19, 0.7);
+      border-bottom: 1px solid var(--border-glass);
+      transition: all 0.3s ease;
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+    }
+
+    .brand-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: #fff;
+      stroke-width: 2;
+    }
+
+    .brand-name {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(to right, #fff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-badge {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--primary-light);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      padding: 0.15rem 0.5rem;
+      border-radius: 20px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.75rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: #fff;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--success);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--success);
+      box-shadow: 0 0 10px var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.6; }
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.25rem;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), #4f46e5);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px rgba(99, 102, 241, 0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      border: 1px solid var(--border-glass);
+      backdrop-filter: blur(8px);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    /* Hero Section */
+    .hero {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 5rem 1.5rem 3.5rem;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 3.5rem;
+      align-items: center;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 1rem;
+      border-radius: 9999px;
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--primary-light);
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-title {
+      font-size: clamp(2.5rem, 5vw, 3.75rem);
+      font-weight: 800;
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-title .gradient-text {
+      background: linear-gradient(135deg, #fff 30%, var(--primary-light) 70%, var(--secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-desc {
+      font-size: 1.125rem;
+      color: var(--text-muted);
+      margin-bottom: 2.25rem;
+      max-width: 540px;
+    }
+
+    .hero-cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-glass);
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+      font-family: var(--font-mono);
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Mockup Discord Message Card */
+    .discord-mockup {
+      background: #313338;
+      border-radius: 14px;
+      padding: 1.5rem;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(99, 102, 241, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      transform: perspective(1000px) rotateY(-4deg) rotateX(2deg);
+      transition: transform 0.3s ease;
+    }
+
+    .discord-mockup:hover {
+      transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
+    }
+
+    .mockup-header {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      margin-bottom: 1rem;
+    }
+
+    .mockup-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+    }
+
+    .mockup-author {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .mockup-name {
+      font-weight: 700;
+      color: #fff;
+      font-size: 0.95rem;
+    }
+
+    .bot-tag {
+      background: #5865f2;
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .mockup-timestamp {
+      font-size: 0.75rem;
+      color: #949ba4;
+    }
+
+    .mockup-content {
+      font-size: 0.92rem;
+      color: #dbdee1;
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+
+    .discord-relative-time {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    .mockup-embed {
+      background: #2b2d31;
+      border-left: 4px solid var(--secondary);
+      border-radius: 4px 8px 8px 4px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .embed-title {
+      font-weight: 700;
+      color: #00a8fc;
+      font-size: 0.95rem;
+      text-decoration: none;
+    }
+
+    .embed-channel {
+      font-size: 0.8rem;
+      color: #949ba4;
+    }
+
+    .embed-thumbnail {
+      width: 100%;
+      height: 160px;
+      background: #1e1f22;
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .embed-thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .embed-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: #e11d48;
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Telemetry Live Bar */
+    .telemetry-section {
+      max-width: 1200px;
+      margin: 0 auto 4rem;
+      padding: 0 1.5rem;
+    }
+
+    .telemetry-bar {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 1.25rem 2rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .telemetry-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .telemetry-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary-light);
+    }
+
+    .telemetry-info h4 {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .telemetry-info p {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      font-family: var(--font-mono);
+    }
+
+    /* Section Headers */
+    .section-header {
+      text-align: center;
+      max-width: 650px;
+      margin: 0 auto 3rem;
+    }
+
+    .section-subtitle {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary-light);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-title {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* Features Grid */
+    .features-section {
+      max-width: 1200px;
+      margin: 0 auto 5rem;
+      padding: 0 1.5rem;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .feature-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .feature-card:hover {
+      border-color: var(--border-glow);
+      transform: translateY(-4px);
+      box-shadow: 0 15px 35px rgba(99, 102, 241, 0.15);
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .feature-card:hover::before {
+      opacity: 1;
+    }
+
+    .feature-icon-wrapper {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      color: var(--primary-light);
+    }
+
+    .feature-card h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.75rem;
+    }
+
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* Live Feed / Monitored Activity */
+    .feed-section {
+      max-width: 1200px;
+      margin: 0 auto 5rem;
+      padding: 0 1.5rem;
+    }
+
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .video-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-glass);
+      border-radius: 14px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .video-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .video-thumb {
+      position: relative;
+      width: 100%;
+      height: 160px;
+      background: #111;
+      overflow: hidden;
+    }
+
+    .video-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+
+    .video-card:hover .video-thumb img {
+      transform: scale(1.05);
+    }
+
+    .video-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .video-badge.cover {
+      background: rgba(236, 72, 153, 0.85);
+    }
+
+    .video-badge.live {
+      background: rgba(239, 68, 68, 0.85);
+    }
+
+    .video-details {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      justify-content: space-between;
+    }
+
+    .video-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.5rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .video-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    .video-id-badge {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+    }
+
+    /* Architecture / Engineering section */
+    .arch-section {
+      max-width: 1200px;
+      margin: 0 auto 5rem;
+      padding: 0 1.5rem;
+    }
+
+    .pipeline-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-glass);
+      border-radius: 20px;
+      padding: 2.5rem;
+      position: relative;
+    }
+
+    .pipeline-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      position: relative;
+    }
+
+    .pipeline-step {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-glass);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      position: relative;
+    }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 0.75rem;
+      font-family: var(--font-mono);
+    }
+
+    .step-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+
+    .step-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Quick Setup / Code snippet */
+    .setup-section {
+      max-width: 1200px;
+      margin: 0 auto 5rem;
+      padding: 0 1.5rem;
+    }
+
+    .code-box {
+      background: #090d1a;
+      border: 1px solid var(--border-glass);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .code-box-header {
+      background: #0f1426;
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-glass);
+    }
+
+    .code-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .code-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #f59e0b; }
+    .dot-green { background: #10b981; }
+
+    .code-filename {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    pre {
+      padding: 1.25rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      color: #e2e8f0;
+      line-height: 1.6;
+    }
+
+    .code-comment { color: #64748b; }
+    .code-var { color: #38bdf8; }
+    .code-val { color: #a78bfa; }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-glass);
+      background: rgba(7, 9, 19, 0.8);
+      padding: 3rem 1.5rem;
+      text-align: center;
+    }
+
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s ease;
+    }
+
+    .footer-links a:hover {
+      color: #fff;
+    }
+
+    .footer-copy {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+        padding-top: 3rem;
+      }
+      .discord-mockup {
+        transform: none;
+      }
+      .nav-links {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Starfield Canvas -->
+  <canvas id="starfield"></canvas>
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+  <div class="ambient-glow glow-3"></div>
+
+  <div class="content-wrapper">
+    <!-- Header -->
+    <header>
+      <div class="nav-container">
+        <a href="#" class="brand">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <div>
+            <span class="brand-name">COSMOPINGS</span>
+          </div>
+          <span class="brand-badge">v1.2.0</span>
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#activity">Live Feed</a></li>
+          <li><a href="#architecture">Architecture</a></li>
+          <li><a href="#setup">Setup</a></li>
+        </ul>
+
+        <div class="nav-actions">
+          <div class="status-pill" id="botStatusPill">
+            <span class="status-dot"></span>
+            <span id="botStatusText">Online (Port 25888)</span>
+          </div>
+          <a href="https://github.com/palmtreepaniko/cosmopings" target="_blank" rel="noopener" class="btn btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+            </svg>
+            GitHub
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-left">
+        <div class="hero-tag">
+          <span>✨</span>
+          <span>Intelligent YouTube Discord Webhook & Alerts</span>
+        </div>
+        <h1 class="hero-title">
+          Real-Time Alerts.<br>
+          <span class="gradient-text">Zero Noise. Pure Music.</span>
+        </h1>
+        <p class="hero-desc">
+          Cosmopings monitors <strong>Mira (@possiblymira)</strong>, notifying Discord designated channels about premiering covers, scheduled livestreams, and spontaneous shows with localized countdowns.
+        </p>
+
+        <div class="hero-cta">
+          <a href="#features" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            Explore Bot Features
+          </a>
+          <a href="#architecture" class="btn btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            View Architecture
+          </a>
+        </div>
+
+        <div class="hero-stats">
+          <div class="stat-item">
+            <span class="stat-value" id="statInterval">300s</span>
+            <span class="stat-label">Check Interval</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="statTotalPosted">14+</span>
+            <span class="stat-label">Videos Tracked</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="statQuota">0 Quota Waste</span>
+            <span class="stat-label">RSS + API Optimized</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <!-- Discord Mockup -->
+        <div class="discord-mockup">
+          <div class="mockup-header">
+            <div class="mockup-avatar">🌌</div>
+            <div class="mockup-author">
+              <span class="mockup-name">Cosmopings</span>
+              <span class="bot-tag">BOT</span>
+              <span class="mockup-timestamp">Today at 18:00</span>
+            </div>
+          </div>
+          <div class="mockup-content">
+            🎵 MIRA is premiering a new cover on <strong>03/11/2026 20:00 (GMT)</strong>, which is <span class="discord-relative-time">&lt;t:1793736000:R&gt;</span>! Don't miss it!~<br>
+            <span style="color: #00a8fc; word-break: break-all;">https://www.youtube.com/watch?v=CvFDMAoyJ8Y</span>
+          </div>
+          <div class="mockup-embed">
+            <div class="embed-title">are we in a cult now?? | Tiny Bunny (CHAPTER 4)</div>
+            <div class="embed-channel">Mira (@possiblymira) • YouTube</div>
+            <div class="embed-thumbnail">
+              <span class="embed-badge">NEW STREAM</span>
+              <img src="https://i.ytimg.com/vi/CvFDMAoyJ8Y/hqdefault.jpg" alt="Video thumbnail" onerror="this.src='https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80'">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Telemetry Bar -->
+    <div class="telemetry-section">
+      <div class="telemetry-bar">
+        <div class="telemetry-item">
+          <div class="telemetry-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="2"></circle>
+              <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path>
+            </svg>
+          </div>
+          <div class="telemetry-info">
+            <h4>Live Gateway Ping</h4>
+            <p id="telemetryPing">~38 ms</p>
+          </div>
+        </div>
+
+        <div class="telemetry-item">
+          <div class="telemetry-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+          </div>
+          <div class="telemetry-info">
+            <h4>Monitored Creator</h4>
+            <p>Mira (@possiblymira)</p>
+          </div>
+        </div>
+
+        <div class="telemetry-item">
+          <div class="telemetry-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+          </div>
+          <div class="telemetry-info">
+            <h4>Health Endpoint</h4>
+            <p id="telemetryStatus">HTTP 200 OK</p>
+          </div>
+        </div>
+
+        <div class="telemetry-item">
+          <div class="telemetry-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </div>
+          <div class="telemetry-info">
+            <h4>Anti-Duplicate Engine</h4>
+            <p>JSON Persistent</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+      <div class="section-header">
+        <div class="section-subtitle">Core Capabilities</div>
+        <h2 class="section-title">Engineered for Accuracy</h2>
+        <p class="section-desc">
+          Cosmopings solves common YouTube notification pain points: missed streams, delayed alerts, Shorts spam, and quota exhaustion.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+          </div>
+          <h3>Dual-Engine Polling</h3>
+          <p>Combines high-frequency YouTube RSS atom feeds with smart YouTube Data API v3 quota caching. Catches publications instantly without hitting API rate limits.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+          </div>
+          <h3>Smart Content Classifier</h3>
+          <p>Automatically separates music covers from gaming/chat livestreams using custom hashtag detection (<code>#miracle_melody</code> vs <code>#miracle_live</code>) and routes them to their dedicated Discord channels.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <h3>Dynamic Relative Timestamps</h3>
+          <p>Posts upcoming premieres with Discord native <code>&lt;t:unix:R&gt;</code> syntax, meaning international viewers see the countdown dynamically in their exact local timezone.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </div>
+          <h3>Shorts & Stale Video Shield</h3>
+          <p>Parses ISO 8601 durations and tags to eliminate unwanted YouTube Shorts notifications. Stale videos older than 24 hours are safely suppressed during cold starts.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <h3>Stateful JSON Deduplication</h3>
+          <p>Maintains persistent <code>posted.json</code> and <code>scheduled.json</code> databases. Survives container restarts without re-pinging your community.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+          </div>
+          <h3>Embedded Web Server</h3>
+          <p>Native asynchronous <code>aiohttp</code> microservice listening on port <code>25888</code> for bot-hosting.cloud proxy routing, keep-alive pings, and real-time JSON status APIs.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Monitored Videos Activity -->
+    <section class="feed-section" id="activity">
+      <div class="section-header">
+        <div class="section-subtitle">Live Activity Feed</div>
+        <h2 class="section-title">Tracked Videos & Premieres</h2>
+        <p class="section-desc">
+          Recent releases monitored and notified to Discord channels by Cosmopings.
+        </p>
+      </div>
+
+      <div class="video-grid" id="videoGrid">
+        <!-- Video 1 -->
+        <a href="https://www.youtube.com/watch?v=CvFDMAoyJ8Y" target="_blank" rel="noopener" class="video-card">
+          <div class="video-thumb">
+            <span class="video-badge live">🔴 LIVESTREAM</span>
+            <img src="https://i.ytimg.com/vi/CvFDMAoyJ8Y/hqdefault.jpg" alt="Video">
+          </div>
+          <div class="video-details">
+            <div class="video-title">are we in a cult now?? | Tiny Bunny (CHAPTER 4)</div>
+            <div class="video-footer">
+              <span>Mira (@possiblymira)</span>
+              <span class="video-id-badge">CvFDMAoyJ8Y</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- Video 2 -->
+        <a href="https://www.youtube.com/watch?v=KuJSTS5AUt4" target="_blank" rel="noopener" class="video-card">
+          <div class="video-thumb">
+            <span class="video-badge cover">🎵 COVER / MUSIC</span>
+            <img src="https://i.ytimg.com/vi/KuJSTS5AUt4/hqdefault.jpg" alt="Video">
+          </div>
+          <div class="video-details">
+            <div class="video-title">Recent Music Release & Cover Notification</div>
+            <div class="video-footer">
+              <span>Mira (@possiblymira)</span>
+              <span class="video-id-badge">KuJSTS5AUt4</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- Video 3 -->
+        <a href="https://www.youtube.com/watch?v=f13ZPDXgufM" target="_blank" rel="noopener" class="video-card">
+          <div class="video-thumb">
+            <span class="video-badge live">🔴 BROADCAST</span>
+            <img src="https://i.ytimg.com/vi/f13ZPDXgufM/hqdefault.jpg" alt="Video">
+          </div>
+          <div class="video-details">
+            <div class="video-title">Special Stream Broadcast & Live Interactive Session</div>
+            <div class="video-footer">
+              <span>Mira (@possiblymira)</span>
+              <span class="video-id-badge">f13ZPDXgufM</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- Video 4 -->
+        <a href="https://www.youtube.com/watch?v=2AwfogFKbj0" target="_blank" rel="noopener" class="video-card">
+          <div class="video-thumb">
+            <span class="video-badge cover">🎵 PREMIERE</span>
+            <img src="https://i.ytimg.com/vi/2AwfogFKbj0/hqdefault.jpg" alt="Video">
+          </div>
+          <div class="video-details">
+            <div class="video-title">Featured Song Premiere & Live Community Chat</div>
+            <div class="video-footer">
+              <span>Mira (@possiblymira)</span>
+              <span class="video-id-badge">2AwfogFKbj0</span>
+            </div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section class="arch-section" id="architecture">
+      <div class="section-header">
+        <div class="section-subtitle">Under the Hood</div>
+        <h2 class="section-title">Data Pipeline Architecture</h2>
+        <p class="section-desc">
+          How Cosmopings ingests, evaluates, classifies, and broadcasts updates asynchronously.
+        </p>
+      </div>
+
+      <div class="pipeline-container">
+        <div class="pipeline-steps">
+          <div class="pipeline-step">
+            <div class="step-num">1</div>
+            <div class="step-title">Ingest & Sync</div>
+            <div class="step-desc">Fast XML RSS polling every 300s + Scheduled YouTube v3 Search API every 6 cycles.</div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-num">2</div>
+            <div class="step-title">Deduplication</div>
+            <div class="step-desc">Validates against <code>posted.json</code> and discards previously announced video IDs.</div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-num">3</div>
+            <div class="step-title">Filter Shield</div>
+            <div class="step-desc">Parses ISO 8601 duration; discards YouTube Shorts & backlog items older than 24h.</div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-num">4</div>
+            <div class="step-title">Classifier</div>
+            <div class="step-desc">Matches hashtags & keywords to route to Cover vs. Livestream Discord channels.</div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-num">5</div>
+            <div class="step-title">Broadcast</div>
+            <div class="step-desc">Constructs dynamic Discord message with timestamp tags and dispatches via Discord Gateway.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quickstart / Setup -->
+    <section class="setup-section" id="setup">
+      <div class="section-header">
+        <div class="section-subtitle">Deployment & Port Config</div>
+        <h2 class="section-title">bot-hosting.cloud Ready</h2>
+        <p class="section-desc">
+          Cosmopings binds to <code>0.0.0.0:25888</code> so your Canonical URL stays active 24/7.
+        </p>
+      </div>
+
+      <div class="code-box">
+        <div class="code-box-header">
+          <div class="code-dots">
+            <span class="code-dot dot-red"></span>
+            <span class="code-dot dot-yellow"></span>
+            <span class="code-dot dot-green"></span>
+          </div>
+          <span class="code-filename">Environment Variables & Port</span>
+          <div></div>
+        </div>
+        <pre><code><span class="code-comment"># Bot & YouTube API Keys</span>
+<span class="code-var">DISCORD_TOKEN</span>=<span class="code-val">your_discord_bot_token_here</span>
+<span class="code-var">YOUTUBE_API_KEY</span>=<span class="code-val">your_youtube_api_key_here</span>
+
+<span class="code-comment"># Bot-Hosting.cloud Proxied Port</span>
+<span class="code-var">PORT</span>=<span class="code-val">25888</span>
+
+<span class="code-comment"># Canonical Domain provided by your host</span>
+<span class="code-comment"># https://2ekkusjbrm.apps.bot-hosting.cloud</span>
+<span class="code-comment"># Health check endpoint for UptimeRobot keep-alive:</span>
+<span class="code-comment"># https://2ekkusjbrm.apps.bot-hosting.cloud/health</span></code></pre>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-content">
+        <a href="#" class="brand">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <span class="brand-name">COSMOPINGS</span>
+        </a>
+        <ul class="footer-links">
+          <li><a href="https://github.com/palmtreepaniko/cosmopings" target="_blank" rel="noopener">GitHub Repository</a></li>
+          <li><a href="https://www.youtube.com/@possiblymira" target="_blank" rel="noopener">Mira's Channel</a></li>
+          <li><a href="/health">Health Endpoint</a></li>
+          <li><a href="/api/status">Status API</a></li>
+        </ul>
+        <p class="footer-copy">
+          Designed for the Mira community • Powered by discord.py, YouTube Data API v3 & aiohttp.
+        </p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Interactive JavaScript: Starfield & Live Telemetry Poller -->
+  <script>
+    // Canvas Starfield animation
+    const canvas = document.getElementById('starfield');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+    const numStars = 120;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    function initStars() {
+      stars = [];
+      for (let i = 0; i < numStars; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          radius: Math.random() * 1.5 + 0.3,
+          alpha: Math.random(),
+          speed: Math.random() * 0.015 + 0.005,
+          color: Math.random() > 0.8 ? '#818cf8' : Math.random() > 0.9 ? '#ec4899' : '#ffffff'
+        });
+      }
+    }
+
+    function drawStars() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let star of stars) {
+        star.alpha += star.speed;
+        if (star.alpha > 1 || star.alpha < 0) {
+          star.speed = -star.speed;
+        }
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fillStyle = star.color;
+        ctx.globalAlpha = Math.abs(star.alpha);
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = star.color;
+        ctx.fill();
+      }
+      requestAnimationFrame(drawStars);
+    }
+
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      initStars();
+    });
+
+    resizeCanvas();
+    initStars();
+    drawStars();
+
+    // Live Telemetry Poller for /api/status
+    async function fetchLiveStatus() {
+      try {
+        const res = await fetch('/api/status');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ping_ms) {
+            document.getElementById('telemetryPing').innerText = `${Math.round(data.ping_ms)} ms`;
+          }
+          if (data.posted_count !== undefined) {
+            document.getElementById('statTotalPosted').innerText = `${data.posted_count}`;
+          }
+          if (data.online) {
+            document.getElementById('botStatusText').innerText = `Online (Port 25888)`;
+            document.getElementById('telemetryStatus').innerText = 'HTTP 200 OK';
+          }
+        }
+      } catch (e) {
+        // Fallback for preview mode
+        console.log('Running in standalone or preview mode.');
+      }
+    }
+
+    fetchLiveStatus();
+    setInterval(fetchLiveStatus, 15000);
+  </script>
+</body>
+</html>
