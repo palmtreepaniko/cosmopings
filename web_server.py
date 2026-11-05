@@ -7,6 +7,27 @@ START_TIME = time.time()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 HTML_PATH = os.path.join(BASE_DIR, "web", "index.html")
 
+ALLOWED_ORIGINS = {
+    "https://palmtreepaniko.github.io",
+    "https://cosmopings.is-a.bot",
+}
+
+@web.middleware
+async def cors_middleware(request, handler):
+    origin = request.headers.get("Origin")
+    if request.method == "OPTIONS":
+        response = web.Response(status=204)
+    else:
+        response = await handler(request)
+
+    if origin in ALLOWED_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers["Access-Control-Max-Age"] = "600"
+    return response
+
 def load_json_safe(filename):
     filepath = os.path.join(BASE_DIR, filename)
     if os.path.exists(filepath):
@@ -18,7 +39,7 @@ def load_json_safe(filename):
     return []
 
 def create_app(bot=None):
-    app = web.Application()
+    app = web.Application(middlewares=[cors_middleware])
 
     async def handle_index(request):
         if os.path.exists(HTML_PATH):
@@ -27,32 +48,23 @@ def create_app(bot=None):
         return web.Response(text="<h1>Cosmopings is Online</h1><p>web/index.html not found</p>", content_type="text/html")
 
     async def handle_health(request):
-        """Endpoint for UptimeRobot / uptime monitors to keep the bot alive."""
+        """Endpoint for uptime monitors."""
         return web.json_response({
             "status": "healthy",
             "service": "cosmopings",
-            "bot_online": bot.is_ready() if bot else True,
+            "bot_online": bool(bot and bot.is_ready()),
             "uptime_seconds": int(time.time() - START_TIME),
             "timestamp": int(time.time())
         })
 
     async def handle_status(request):
-        """Live API endpoint consumed by the frontend."""
+        """Live API endpoint consumed by the public portfolio."""
         posted = load_json_safe("posted.json")
         scheduled = load_json_safe("scheduled.json")
 
-        ping_ms = 0.0
-        bot_user = "Cosmopings#0000"
-        online = False
-
-        if bot:
-            online = bot.is_ready()
-            ping_ms = round(bot.latency * 1000, 1) if bot.latency and bot.latency > 0 else 38.0
-            if bot.user:
-                bot_user = str(bot.user)
-        else:
-            online = True
-            ping_ms = 35.0
+        online = bool(bot and bot.is_ready())
+        ping_ms = round(bot.latency * 1000, 1) if online and bot.latency and bot.latency > 0 else None
+        bot_user = str(bot.user) if online and bot.user else None
 
         return web.json_response({
             "online": online,
@@ -75,7 +87,7 @@ def create_app(bot=None):
 async def start_web(bot=None, port=None):
     if port is None:
         port = int(os.getenv("PORT", 25888))
-    
+
     app = create_app(bot)
     runner = web.AppRunner(app)
     await runner.setup()
