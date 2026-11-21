@@ -1,1264 +1,419 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cosmopings — Autonomous YouTube Alert Engine & Portfolio</title>
-  <meta name="description" content="Cosmopings is a high-performance, real-time YouTube notification microservice for Discord built by palmtreepaniko.">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080b18">
+  <meta name="description" content="Cosmopings posts new YouTube covers and livestreams to your Discord server.">
+  <title>cosmopings</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='2' y='2' width='60' height='60' rx='18' fill='%2310162a' stroke='%239c8bff' stroke-width='3' transform='rotate(-8 32 32)'/%3E%3Crect x='16' y='23.5' width='7.4' height='17' rx='2' fill='%23b8a6ff' transform='rotate(-8 32 32)'/%3E%3Crect x='28.3' y='16' width='7.4' height='32' rx='2' fill='%23b8a6ff' transform='rotate(-8 32 32)'/%3E%3Crect x='40.6' y='21' width='7.4' height='22' rx='2' fill='%23b8a6ff' transform='rotate(-8 32 32)'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg-void: #050608;
-      --bg-card: rgba(14, 17, 26, 0.75);
-      --bg-card-hover: rgba(20, 25, 38, 0.9);
-      --border-subtle: rgba(255, 255, 255, 0.08);
-      --border-glow: rgba(99, 102, 241, 0.4);
-      --border-active: rgba(56, 189, 248, 0.5);
-
-      --primary: #6366f1;
-      --primary-light: #818cf8;
-      --secondary: #ec4899;
-      --cyan: #38bdf8;
-      --emerald: #10b981;
-      --amber: #f59e0b;
-      --crimson: #f43f5e;
-
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
-
-      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      background-color: var(--bg-void);
-      color: var(--text-main);
-      font-family: var(--font-sans);
-      line-height: 1.6;
-      overflow-x: hidden;
-      min-height: 100vh;
-      position: relative;
-    }
-
-    /* Ambient Cyber Glow Backgrounds */
-    .ambient-mesh {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 0;
-      overflow: hidden;
-    }
-
-    .glow-sphere {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(130px);
-      opacity: 0.16;
-      pointer-events: none;
-    }
-
-    .glow-top-left {
-      top: -150px;
-      left: -100px;
-      width: 650px;
-      height: 650px;
-      background: radial-gradient(circle, #6366f1, #3b82f6, transparent);
-    }
-
-    .glow-middle-right {
-      top: 35%;
-      right: -150px;
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, #ec4899, #8b5cf6, transparent);
-      opacity: 0.12;
-    }
-
-    .glow-bottom-center {
-      bottom: -100px;
-      left: 20%;
-      width: 700px;
-      height: 700px;
-      background: radial-gradient(circle, #06b6d4, #6366f1, transparent);
-      opacity: 0.1;
-    }
-
-    /* Grid overlay texture */
-    .grid-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image: 
-        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .wrapper {
-      position: relative;
-      z-index: 1;
-    }
-
-    /* Top Navigation */
-    header.site-nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      background: rgba(5, 6, 8, 0.75);
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .nav-container {
-      max-width: 1240px;
-      margin: 0 auto;
-      padding: 0.9rem 1.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .brand-group {
-      display: flex;
-      align-items: center;
-      gap: 0.85rem;
-      text-decoration: none;
-      color: var(--text-main);
-    }
-
-    .brand-icon-box {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #6366f1, #ec4899);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
-    }
-
-    .brand-icon-box svg {
-      width: 20px;
-      height: 20px;
-      fill: none;
-      stroke: #fff;
-      stroke-width: 2.2;
-    }
-
-    .brand-name {
-      font-size: 1.15rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      background: linear-gradient(to right, #fff, #cbd5e1);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .brand-pill {
-      font-family: var(--font-mono);
-      font-size: 0.68rem;
-      font-weight: 600;
-      background: rgba(99, 102, 241, 0.15);
-      color: var(--primary-light);
-      border: 1px solid rgba(99, 102, 241, 0.3);
-      padding: 0.15rem 0.45rem;
-      border-radius: 4px;
-    }
-
-    .nav-links {
-      display: none;
-      align-items: center;
-      gap: 2rem;
-      list-style: none;
-    }
-
-    @media (min-width: 860px) {
-      .nav-links {
-        display: flex;
-      }
-    }
-
-    .nav-links a {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 0.88rem;
-      font-weight: 500;
-      transition: color 0.2s ease;
-    }
-
-    .nav-links a:hover {
-      color: #fff;
-    }
-
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.85rem;
-    }
-
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.35rem 0.8rem;
-      border-radius: 9999px;
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.25);
-      font-size: 0.78rem;
-      font-weight: 600;
-      font-family: var(--font-mono);
-      color: var(--emerald);
-    }
-
-    .pulse-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background-color: var(--emerald);
-      box-shadow: 0 0 10px var(--emerald);
-      animation: pulseGlow 2s infinite;
-    }
-
-    @keyframes pulseGlow {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.3); opacity: 0.6; }
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.6rem 1.15rem;
-      border-radius: 8px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      text-decoration: none;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      cursor: pointer;
-      border: none;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #6366f1, #4f46e5);
-      color: #fff;
-      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 25px rgba(99, 102, 241, 0.5);
-    }
-
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text-main);
-      border: 1px solid var(--border-subtle);
-    }
-
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.2);
-      transform: translateY(-2px);
-    }
-
-    /* Main Container */
-    main.main-content {
-      max-width: 1240px;
-      margin: 0 auto;
-      padding: 4rem 1.5rem 6rem;
-    }
-
-    /* Hero Section */
-    .hero-grid {
-      display: grid;
-      grid-template-columns: 1.15fr 0.85fr;
-      gap: 3.5rem;
-      align-items: center;
-      margin-bottom: 5rem;
-    }
-
-    @media (max-width: 960px) {
-      .hero-grid {
-        grid-template-columns: 1fr;
-        gap: 3rem;
-      }
-    }
-
-    .hero-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.35rem 0.85rem;
-      border-radius: 9999px;
-      background: rgba(99, 102, 241, 0.12);
-      border: 1px solid rgba(99, 102, 241, 0.25);
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--primary-light);
-      margin-bottom: 1.25rem;
-    }
-
-    .hero-headline {
-      font-size: clamp(2.5rem, 5vw, 3.85rem);
-      font-weight: 800;
-      line-height: 1.12;
-      letter-spacing: -0.035em;
-      margin-bottom: 1.5rem;
-    }
-
-    .hero-headline .highlight-gradient {
-      background: linear-gradient(135deg, #fff 40%, var(--cyan) 80%, var(--secondary) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .hero-lead {
-      font-size: 1.125rem;
-      color: var(--text-muted);
-      line-height: 1.65;
-      margin-bottom: 2rem;
-      max-width: 580px;
-    }
-
-    .hero-actions-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      margin-bottom: 2.5rem;
-    }
-
-    /* Real-time Telemetry Bar */
-    .telemetry-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 1rem;
-      margin-bottom: 4.5rem;
-    }
-
-    .telemetry-card {
-      background: var(--bg-card);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      padding: 1.25rem;
-      transition: all 0.25s ease;
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-    }
-
-    .telemetry-card:hover {
-      border-color: var(--border-glow);
-      transform: translateY(-2px);
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-    }
-
-    .tele-tag {
-      font-family: var(--font-mono);
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    .tele-stat {
-      font-family: var(--font-mono);
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #fff;
-    }
-
-    /* Authentic Discord Card Mockup */
-    .discord-mockup-frame {
-      background: #313338;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 14px;
-      padding: 1.5rem;
-      box-shadow: 
-        0 25px 60px rgba(0, 0, 0, 0.6), 
-        0 0 40px rgba(99, 102, 241, 0.15);
-      position: relative;
-      transition: transform 0.3s ease;
-    }
-
-    .discord-mockup-frame:hover {
-      transform: translateY(-3px);
-    }
-
-    .discord-user-bar {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 0.85rem;
-    }
-
-    .discord-avatar {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #6366f1, #a855f7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.15rem;
-      color: #fff;
-      font-weight: 700;
-    }
-
-    .discord-user-name {
-      font-weight: 700;
-      color: #fff;
-      font-size: 0.95rem;
-    }
-
-    .discord-bot-tag {
-      background: #5865f2;
-      color: #fff;
-      font-size: 0.65rem;
-      font-weight: 700;
-      padding: 0.1rem 0.35rem;
-      border-radius: 4px;
-      text-transform: uppercase;
-    }
-
-    .discord-time-text {
-      font-size: 0.75rem;
-      color: #949ba4;
-      margin-left: 0.25rem;
-    }
-
-    .discord-msg-content {
-      font-size: 0.95rem;
-      color: #dbdee1;
-      margin-bottom: 1rem;
-      line-height: 1.5;
-    }
-
-    .discord-time-pill {
-      background: rgba(255, 255, 255, 0.08);
-      padding: 0.15rem 0.4rem;
-      border-radius: 4px;
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      color: #00a8fc;
-      border: 1px solid rgba(0, 168, 252, 0.25);
-    }
-
-    .discord-embed-card {
-      background: #2b2d31;
-      border-left: 4px solid var(--crimson);
-      border-radius: 4px 8px 8px 4px;
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .embed-title-link {
-      font-weight: 700;
-      color: #00a8fc;
-      font-size: 0.95rem;
-      text-decoration: none;
-    }
-
-    .embed-channel-sub {
-      font-size: 0.8rem;
-      color: #949ba4;
-    }
-
-    .embed-img-wrap {
-      width: 100%;
-      height: 160px;
-      border-radius: 6px;
-      overflow: hidden;
-      position: relative;
-      background: #111;
-    }
-
-    .embed-img-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .embed-badge-tag {
-      position: absolute;
-      top: 8px;
-      left: 8px;
-      background: var(--crimson);
-      color: #fff;
-      font-size: 0.68rem;
-      font-weight: 800;
-      padding: 0.2rem 0.5rem;
-      border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    /* Reaction Row */
-    .discord-reactions {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: 0.85rem;
-    }
-
-    .reaction-pill {
-      background: #2b2d31;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 8px;
-      padding: 0.25rem 0.65rem;
-      font-size: 0.8rem;
-      color: #dbdee1;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      cursor: pointer;
-      user-select: none;
-      transition: all 0.2s ease;
-    }
-
-    .reaction-pill:hover {
-      background: #35373c;
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .reaction-pill.active {
-      background: rgba(88, 101, 242, 0.2);
-      border-color: #5865f2;
-      color: #fff;
-    }
-
-    /* Section Header */
-    .section-wrap {
-      margin-bottom: 5rem;
-    }
-
-    .section-header-row {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--border-subtle);
-      padding-bottom: 1.25rem;
-      margin-bottom: 2.25rem;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-
-    .section-eyebrow {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--cyan);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 0.35rem;
-    }
-
-    .section-headline {
-      font-size: 1.85rem;
-      font-weight: 800;
-      letter-spacing: -0.025em;
-      color: #fff;
-    }
-
-    .filter-tabs {
-      display: flex;
-      gap: 0.5rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 0.25rem;
-    }
-
-    .filter-tab {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      font-family: var(--font-sans);
-      font-size: 0.82rem;
-      font-weight: 600;
-      padding: 0.45rem 0.9rem;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .filter-tab.active {
-      background: var(--bg-card-hover);
-      color: #fff;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-    }
-
-    /* Live Feed Grid */
-    .feed-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1.5rem;
-    }
-
-    .video-card-item {
-      background: var(--bg-card);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      overflow: hidden;
-      transition: all 0.25s ease;
-      display: flex;
-      flex-direction: column;
-      text-decoration: none;
-      color: inherit;
-    }
-
-    .video-card-item:hover {
-      border-color: var(--border-glow);
-      transform: translateY(-3px);
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-    }
-
-    .card-thumb-wrap {
-      width: 100%;
-      height: 165px;
-      background: #000;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .card-thumb-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.3s ease;
-    }
-
-    .video-card-item:hover .card-thumb-wrap img {
-      transform: scale(1.04);
-    }
-
-    .card-badge {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      font-weight: 700;
-      padding: 0.25rem 0.6rem;
-      border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .badge-live {
-      background: rgba(244, 63, 94, 0.9);
-      color: #fff;
-    }
-
-    .badge-cover {
-      background: rgba(245, 158, 11, 0.9);
-      color: #fff;
-    }
-
-    .card-content-wrap {
-      padding: 1.25rem;
-      display: flex;
-      flex-direction: column;
-      flex-grow: 1;
-      justify-content: space-between;
-    }
-
-    .card-title {
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: #fff;
-      line-height: 1.4;
-      margin-bottom: 0.5rem;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .card-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 1rem;
-      font-size: 0.8rem;
-      color: var(--text-dim);
-    }
-
-    .card-id-tag {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      background: rgba(255, 255, 255, 0.06);
-      padding: 0.15rem 0.45rem;
-      border-radius: 4px;
-    }
-
-    /* Architecture Visual Stepper */
-    .arch-flow-box {
-      background: var(--bg-card);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--border-subtle);
-      border-radius: 14px;
-      padding: 2.5rem;
-    }
-
-    .stepper-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1.5rem;
-    }
-
-    .stepper-item {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      padding: 1.5rem;
-      position: relative;
-      transition: all 0.25s ease;
-    }
-
-    .stepper-item:hover {
-      border-color: var(--border-active);
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    .step-number {
-      width: 30px;
-      height: 30px;
-      border-radius: 8px;
-      background: var(--primary);
-      color: #fff;
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 1rem;
-    }
-
-    .step-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 0.5rem;
-    }
-
-    .step-desc {
-      font-size: 0.88rem;
-      color: var(--text-muted);
-      line-height: 1.55;
-    }
-
-    /* Interactive Terminal Console */
-    .terminal-box {
-      background: #090c15;
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
-    }
-
-    .terminal-header {
-      background: #0f1322;
-      padding: 0.85rem 1.25rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .terminal-dots {
-      display: flex;
-      gap: 7px;
-    }
-
-    .t-dot {
-      width: 11px;
-      height: 11px;
-      border-radius: 50%;
-    }
-
-    .t-red { background: #ef4444; }
-    .t-yellow { background: #f59e0b; }
-    .t-green { background: #10b981; }
-
-    .terminal-tabs {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .term-tab {
-      background: transparent;
-      border: none;
-      color: var(--text-dim);
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      padding: 0.25rem 0.65rem;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .term-tab.active {
-      background: rgba(255, 255, 255, 0.08);
-      color: #fff;
-    }
-
-    .terminal-body {
-      padding: 1.5rem;
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      color: var(--emerald);
-      max-height: 280px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-
-    /* Footer */
-    footer.site-footer {
-      border-top: 1px solid var(--border-subtle);
-      background: rgba(5, 6, 8, 0.8);
-      padding: 3rem 1.5rem;
-    }
-
-    .footer-inner {
-      max-width: 1240px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 1.5rem;
-    }
-
-    .footer-brand {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .footer-name {
-      font-weight: 800;
-      font-size: 1.05rem;
-      color: #fff;
-    }
-
-    .footer-tagline {
-      font-size: 0.85rem;
-      color: var(--text-dim);
-    }
-
-    .footer-nav {
-      display: flex;
-      gap: 1.75rem;
-      list-style: none;
-      font-size: 0.88rem;
-    }
-
-    .footer-nav a {
-      color: var(--text-muted);
-      text-decoration: none;
-      transition: color 0.2s ease;
-    }
-
-    .footer-nav a:hover {
-      color: #fff;
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <style>
+    :root{--bg:#080b18;--panel:#10162a;--panel2:#121b32;--text:#f4f5fb;--muted:#a1abc2;--purple:#a78bfa;--cyan:#7dd3fc;--line:rgba(178,190,230,.14)}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,system-ui,sans-serif;overflow-x:hidden}a{color:inherit;text-decoration:none}.wrap{width:min(1160px,calc(100% - 48px));margin-inline:auto}.stars{position:absolute;inset:0 0 auto;height:760px;pointer-events:none;opacity:.42;background-image:radial-gradient(1px 1px at 8% 14%,#fff 99%,transparent),radial-gradient(1px 1px at 23% 32%,#b6c9ff 99%,transparent),radial-gradient(1px 1px at 78% 18%,#fff 99%,transparent),radial-gradient(2px 2px at 91% 43%,#b9a6ff 99%,transparent),radial-gradient(1px 1px at 57% 9%,#fff 99%,transparent),radial-gradient(1px 1px at 44% 54%,#fff 99%,transparent);background-size:420px 380px}
 
-  <!-- Ambient Glow Backgrounds -->
-  <div class="ambient-mesh">
-    <div class="glow-sphere glow-top-left"></div>
-    <div class="glow-sphere glow-middle-right"></div>
-    <div class="glow-sphere glow-bottom-center"></div>
-  </div>
-  <div class="grid-overlay"></div>
+    .topbar{height:88px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);position:relative;z-index:2}.brand{display:flex;align-items:center;gap:11px;font-size:19px;font-weight:800;letter-spacing:-.8px}.brand-dot{color:var(--purple)}.brand-mark{width:26px;height:26px;border:1px solid #9c8bff;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:2px;transform:rotate(-8deg);box-shadow:0 0 24px #8b5cf633}.brand-mark span{display:block;width:3px;border-radius:4px;background:#b8a6ff}.brand-mark span:nth-child(1){height:7px}.brand-mark span:nth-child(2){height:13px}.brand-mark span:nth-child(3){height:9px}
+    nav{display:flex;gap:34px;color:var(--muted);font-size:12px}nav a:hover,.button-quiet:hover{color:var(--purple)}.nav-cta{font-size:12px;font-weight:700;border:1px solid var(--line);border-radius:30px;padding:11px 17px}.nav-cta span{color:var(--purple);margin-left:9px}
 
-  <div class="wrapper">
-    <!-- Navigation -->
-    <header class="site-nav">
-      <div class="nav-container">
-        <a href="#" class="brand-group">
-          <div class="brand-icon-box">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
-          </div>
-          <span class="brand-name">COSMOPINGS</span>
-          <span class="brand-pill">v2.5</span>
-        </a>
+    .hero{min-height:625px;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:30px;position:relative}.hero-copy{padding:75px 0 90px;position:relative;z-index:1}.eyebrow,.card-index,.micro-note,.closing-foot,.ticker{font-family:"DM Mono",monospace;letter-spacing:1.7px}.eyebrow{font-size:10px;color:#b9a9ff;display:flex;align-items:center;gap:10px}.pulse{width:7px;height:7px;border-radius:50%;background:#8ee5c3;box-shadow:0 0 12px #8ee5c3}.hero h1{font-size:clamp(58px,7.2vw,94px);line-height:.98;letter-spacing:-7px;margin:26px 0 24px;font-weight:800}.hero h1 em,h2 em{font-style:normal;color:var(--purple)}.hero-lede{max-width:490px;color:var(--muted);font-size:15px;line-height:1.9}.hero-actions{display:flex;gap:13px;align-items:center;margin-top:31px}.button{display:inline-flex;align-items:center;gap:18px;padding:14px 19px;border-radius:8px;font-size:12px;font-weight:800;transition:transform .2s,box-shadow .2s}.button:hover{transform:translateY(-2px)}.button-primary{background:linear-gradient(110deg,#a78bfa,#7c8df7);color:#0b0d1b;box-shadow:0 10px 35px #8b5cf62c}.button-primary .bi{font-size:14px}.button-quiet{border:1px solid var(--line);color:#d8dced}.micro-note{font-size:9px;color:#77829d;margin-top:31px;letter-spacing:.7px}.micro-star{color:var(--purple);font-size:15px;margin-right:8px}
 
-        <ul class="nav-links">
-          <li><a href="#overview">Overview</a></li>
-          <li><a href="#activity">Live Activity</a></li>
-          <li><a href="#architecture">Architecture</a></li>
-          <li><a href="#console">Console</a></li>
-        </ul>
+    .orbit-scene{height:460px;position:relative;display:grid;place-items:center}.orbit{position:absolute;border:1px solid #9a8bff24;border-radius:50%;transform:rotate(-25deg)}.orbit-one{width:390px;height:235px}.orbit-two{width:480px;height:300px;transform:rotate(35deg);border-color:#7dd3fc20}.planet{width:190px;height:190px;border-radius:50%;position:relative;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#6f70c5,#242c61 48%,#11182f 75%);box-shadow:inset -22px -20px 45px #080b18,0 0 90px #6c63d444,0 0 160px #6c63d422}.planet:before{content:"";position:absolute;inset:18px;border:1px solid #bcb3ff30;border-radius:50%}.planet-glow{position:absolute;width:110px;height:110px;border-radius:50%;background:#a78bfa22;filter:blur(20px)}.planet-symbol{font-size:48px;color:#d6d1ff;text-shadow:0 0 30px #fff}
+    .satellite{position:absolute;z-index:2;border:1px solid #aab3d32d;background:#11182deF;border-radius:12px;padding:12px 15px;box-shadow:0 15px 40px #0005;display:flex;align-items:center;gap:10px;transition:transform .3s}.satellite:hover{transform:translateY(-3px)}.satellite small,.discord-node small{font:9px "DM Mono";letter-spacing:1px;color:#c0c9df}.sat-youtube{top:72px;left:4px}.sat-youtube .bi{font-size:18px;color:#ff5368}.sat-live{right:0;bottom:94px}.live-icon{font-size:14px;color:#ff667d;animation:pulse-live 1.6s ease-in-out infinite}@keyframes pulse-live{0%,100%{opacity:1}50%{opacity:.35}}
+    .discord-node{position:absolute;right:15px;top:94px;width:72px;height:72px;border:1px solid #a78bfa55;border-radius:22px;background:#1c2141;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 40px #8b5cf633;transition:transform .25s,box-shadow .25s}.discord-node:hover{transform:translateY(-4px);box-shadow:0 0 50px #8b5cf655}.discord-mark{font-size:30px;color:#b9a6ff;line-height:1}.discord-node small{font-size:7px}
+    .signal-line{position:absolute;width:130px;height:1px;background:linear-gradient(90deg,transparent,#a78bfa,transparent);transform:rotate(25deg);top:48%;left:62%;opacity:.7}.tiny-star{position:absolute;color:#bbaeff}.star-a{top:18%;left:43%}.star-b{bottom:17%;left:17%;font-size:22px}.star-c{top:28%;right:14%;font-size:30px}
 
-        <div class="nav-actions">
-          <div class="status-badge">
-            <span class="pulse-dot"></span>
-            <span id="navStatus">PORT :25888 ONLINE</span>
-          </div>
-          <a href="https://github.com/palmtreepaniko/cosmopings" target="_blank" rel="noopener" class="btn btn-secondary">
-            GitHub
-          </a>
-        </div>
-      </div>
-    </header>
+    .ticker{height:56px;border-block:1px solid var(--line);overflow:hidden;display:flex;align-items:center;color:#929db7;font-size:9px;white-space:nowrap}.ticker-inner{display:flex;align-items:center;justify-content:space-around;gap:48px;width:100%;min-width:850px}.ticker b{color:var(--purple);font-size:14px}
 
-    <main class="main-content">
-      <!-- Hero Section -->
-      <section class="hero-grid" id="overview">
-        <div class="hero-left">
-          <div class="hero-eyebrow">
-            <span>⚡</span>
-            <span>Autonomous YouTube & Livestream Dispatcher</span>
-          </div>
-          <h1 class="hero-headline">
-            High-Frequency Alerts.<br>
-            <span class="highlight-gradient">Zero Spam. Pure Stream.</span>
-          </h1>
-          <p class="hero-lead">
-            Cosmopings monitors <strong>Mira (@possiblymira)</strong>, catching musical covers, surprise livestreams, and scheduled premieres with dynamic local countdowns on Discord.
-          </p>
+    .section{padding-top:125px;padding-bottom:130px}.section-heading{display:grid;grid-template-columns:1fr 1fr;align-items:end;margin-bottom:45px}.section-heading .eyebrow{grid-column:1/-1;margin-bottom:20px}.section-heading h2,.how-layout h2,.closing h2{font-size:clamp(42px,5vw,64px);letter-spacing:-4px;line-height:1.05;margin:0}.section-heading p{max-width:370px;color:var(--muted);font-size:13px;line-height:1.8;margin:0 0 5px}
+    .feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.feature-card{min-height:270px;border:1px solid var(--line);border-radius:13px;padding:27px;background:linear-gradient(145deg,#121a30,#0d1223);position:relative;overflow:hidden;transition:border-color .3s,transform .3s}.feature-card:hover{border-color:#a78bfa55;transform:translateY(-3px)}.feature-large{background:radial-gradient(ellipse at 90% 100%,#6e5cc522,transparent 55%),linear-gradient(145deg,#141b33,#0d1223)}
+    .feature-icon{width:39px;height:39px;border-radius:11px;display:grid;place-items:center;margin-bottom:22px}.feature-icon .bi{font-size:20px}.icon-orbit{color:#b7a7ff;background:#8b5cf622}.icon-bell{color:#8bd8ff;background:#38bdf822}.icon-spark{color:#f5c98b;background:#f59e0b1a}.icon-calendar{color:#9be4c7;background:#34d3991c}
+    .feature-card:hover .feature-icon .bi{transform:scale(1.2) rotate(-8deg)}
+    .card-index{position:absolute;right:27px;top:39px;color:#65718e;font-size:8px}.feature-card h3{font-size:25px;line-height:1.16;letter-spacing:-1px;margin:0 0 12px}.feature-card p{font-size:12px;line-height:1.8;color:var(--muted);max-width:380px;margin:0}.mini-wave{height:42px;display:flex;align-items:center;gap:5px;position:absolute;bottom:23px;right:28px;opacity:.7}.mini-wave i{width:3px;border-radius:5px;background:#a78bfa;height:20%}.mini-wave i:nth-child(3n){height:70%}.mini-wave i:nth-child(2n){height:42%}.mini-wave i:nth-child(4n){height:90%}
+    .channel-preview{font:10px "DM Mono";background:#0a1020;border:1px solid var(--line);padding:9px 11px;border-radius:6px;margin-top:9px;color:#c5cde0}.hash{color:#8391b4;font-size:14px;margin-right:7px}.channel-check{float:right;color:#83dfb5;font-size:12px}
+    .type-pills{display:flex;gap:8px;margin-top:20px}.type-pills span{font:9px "DM Mono";padding:7px 9px;border:1px solid var(--line);border-radius:5px;color:#d4d9e9;transition:border-color .3s}.type-pills span:hover{border-color:#a78bfa77}.type-pills span:last-child{color:#ff91a1}.type-pills i{display:inline-block;width:6px;height:6px;background:#ff647b;border-radius:50%;margin-right:5px}.type-pills .bi{width:auto;height:auto;background:none;border-radius:0;font-size:11px;margin-right:5px}.type-pills span:hover .bi{transform:scale(1.25)}
 
-          <div class="hero-actions-row">
-            <a href="#activity" class="btn btn-primary">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-              Explore Live Feed
-            </a>
-            <a href="#console" class="btn btn-secondary">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-              </svg>
-              Test Microservice API
-            </a>
-          </div>
-        </div>
+    .how-section{background:#0d1222;border-block:1px solid var(--line);padding:115px 0}.how-layout{display:grid;grid-template-columns:.85fr 1.15fr;gap:90px}.how-layout .eyebrow{margin-bottom:22px}.section-intro{color:var(--muted);font-size:13px;line-height:1.9;max-width:340px;margin-top:22px}.steps{border-top:1px solid var(--line)}.step{display:grid;grid-template-columns:48px 1fr 30px;gap:15px;align-items:center;padding:25px 0;border-bottom:1px solid var(--line);transition:padding-left .3s}.step:hover{padding-left:8px}.step-number{font:10px "DM Mono";color:#9f8cff}.step h3{font-size:15px;margin:0 0 7px}.step p{font-size:11px;color:var(--muted);margin:0;line-height:1.7}.step-symbol{font-size:23px;color:#a78bfa;text-align:right}.step:hover .step-symbol .bi{transform:scale(1.25) rotate(-8deg)}
 
-        <div class="hero-right">
-          <!-- Interactive Discord Mockup Frame -->
-          <div class="discord-mockup-frame">
-            <div class="discord-user-bar">
-              <div class="discord-avatar">🌌</div>
-              <div>
-                <span class="discord-user-name">Cosmopings</span>
-                <span class="discord-bot-tag">BOT</span>
-                <span class="discord-time-text">Today at 18:00</span>
-              </div>
-            </div>
+    .preview-section{background:#0d1222;border-block:1px solid var(--line);padding:110px 0}.preview-layout{display:grid;grid-template-columns:.8fr 1.2fr;gap:70px;align-items:center}.preview-note{display:inline-block;margin-top:25px;font:8px "DM Mono";letter-spacing:1.2px;color:#8390ad}.discord-window{border:1px solid #8e9cbd30;border-radius:13px;background:#111827;overflow:hidden;box-shadow:0 25px 70px #0005;transform:rotate(1deg)}.discord-window-top{display:flex;align-items:center;justify-content:space-between;padding:14px 17px;background:#171f30;border-bottom:1px solid #ffffff0d;color:#9ba8c1;font:9px "DM Mono";letter-spacing:.7px}.window-lights{display:flex;gap:5px}.window-lights i{width:6px;height:6px;border-radius:50%;background:#a78bfa}.window-lights i:nth-child(2){background:#7dd3fc}.window-lights i:nth-child(3){background:#8ee5c3}
+    .discord-message{display:flex;gap:12px;padding:25px 20px 30px}.bot-avatar{flex:0 0 34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#7765c8;color:white;transition:transform .3s}.bot-avatar .bi{font-size:16px}.discord-message:hover .bot-avatar{transform:scale(1.08)}.discord-message:hover .bot-avatar .bi{transform:rotate(-10deg)}.message-content{min-width:0;flex:1}.message-author{font-size:11px;font-weight:800;color:#f0f2fa}.message-author span{font:7px "DM Mono";background:#5865f2;color:white;padding:3px 5px;border-radius:3px;margin-left:5px}.message-author time{font-size:9px;font-weight:400;color:#77839c;margin-left:7px}.embed-card{margin-top:11px;border-left:3px solid #a78bfa;border-radius:4px;background:#1a2437;padding:16px;max-width:430px}.embed-kicker{font:8px "DM Mono";letter-spacing:1px;color:#a99aff}.embed-kicker i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#8ee5c3;margin-right:6px}.embed-card h3{font-size:18px;margin:12px 0 7px}.embed-card p{font-size:10px;line-height:1.7;color:#aab5cb;margin:0 0 13px}
+    .video-placeholder{height:125px;border-radius:7px;background:radial-gradient(circle at 50% 50%,#6b5bb7,#202b4c 58%,#11192b);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:#e3dcff}.video-placeholder>span{width:35px;height:35px;border-radius:50%;display:grid;place-items:center;background:#ffffff22;transition:background .3s}.video-placeholder:hover>span{background:#ffffff40}.video-placeholder .bi{font-size:14px}.video-placeholder small{font:8px "DM Mono";letter-spacing:1px}.video-placeholder:hover .bi{transform:scale(1.2)}.embed-footer{font:7px "DM Mono";letter-spacing:1px;color:#73819e;margin-top:12px}.embed-footer b{color:var(--purple);padding:0 5px}
 
-            <div class="discord-msg-content">
-              🎵 MIRA is premiering a new cover on <strong>03/11/2026 20:00 (GMT)</strong>, which is <span class="discord-time-pill">&lt;t:1793736000:R&gt;</span>! Don't miss it!~<br>
-              <span style="color: #00a8fc; word-break: break-all;">https://www.youtube.com/watch?v=CvFDMAoyJ8Y</span>
-            </div>
+    .source-section{padding:110px 0 90px}.source-heading{display:grid;grid-template-columns:1fr 1fr;align-items:end;margin-bottom:35px}.source-heading .eyebrow{grid-column:1/-1}.source-heading h2{margin-bottom:0}.source-heading>p{justify-self:end}.repo-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.repo-card{display:block;padding:26px;border:1px solid var(--line);border-radius:13px;background:linear-gradient(145deg,#131b31,#0c1120);transition:transform .2s,border-color .2s}.repo-card:hover{transform:translateY(-4px);border-color:#a78bfa77}.repo-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px}.repo-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:10px;background:#a78bfa1c;color:#c4b7ff;font-size:20px}.repo-icon .bi{font-size:20px}.repo-card:hover .repo-icon .bi{transform:scale(1.2) rotate(-8deg)}.repo-arrow{color:#9c8aff}.repo-arrow .bi{font-size:14px}.repo-label{font:8px "DM Mono";letter-spacing:1.5px;color:#8e9ab5}.repo-card h3{font-size:22px;letter-spacing:-.7px;margin:9px 0}.repo-card p{min-height:44px;color:var(--muted);font-size:11px;line-height:1.8}.repo-link{display:inline-block;margin-top:15px;font:8px "DM Mono";letter-spacing:1px;color:#c0b3ff}.repo-link .bi{margin-left:7px;font-size:10px}.source-foot{display:flex;justify-content:space-between;gap:15px;margin-top:18px;color:#687593;font:8px "DM Mono";letter-spacing:1px}
 
-            <div class="discord-embed-card">
-              <a href="https://www.youtube.com/watch?v=CvFDMAoyJ8Y" target="_blank" rel="noopener" class="embed-title-link">
-                are we in a cult now?? | Tiny Bunny (CHAPTER 4)
-              </a>
-              <div class="embed-channel-sub">Mira (@possiblymira) • YouTube</div>
-              <div class="embed-img-wrap">
-                <span class="embed-badge-tag">🔴 LIVESTREAM</span>
-                <img src="https://i.ytimg.com/vi/CvFDMAoyJ8Y/hqdefault.jpg" alt="Video preview">
-              </div>
-            </div>
+    .faq-mini{max-width:560px;margin:45px auto 0;text-align:left;border-top:1px solid var(--line);scroll-margin-top:30px}.faq-mini details{border-bottom:1px solid var(--line);padding:15px 2px}.faq-mini summary{cursor:pointer;font-size:11px;font-weight:700;color:#dce2f2}.faq-mini details p{font-size:10px;line-height:1.8;color:var(--muted);margin:12px 0 0}.footer a{color:#b7a7ff;margin-left:8px}
 
-            <!-- Clickable Reactions -->
-            <div class="discord-reactions">
-              <div class="reaction-pill active" onclick="toggleReaction(this)">
-                <span>🎵</span> <span class="rx-count">142</span>
-              </div>
-              <div class="reaction-pill" onclick="toggleReaction(this)">
-                <span>🔥</span> <span class="rx-count">89</span>
-              </div>
-              <div class="reaction-pill" onclick="toggleReaction(this)">
-                <span>💖</span> <span class="rx-count">210</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+    .closing{padding-top:110px;padding-bottom:95px}.closing-card{text-align:center;border:1px solid #a78bfa30;border-radius:17px;padding:75px 25px 28px;position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 0%,#7965d52c,transparent 55%),linear-gradient(140deg,#121a31,#0d1223)}.closing-orb{width:48px;height:48px;border-radius:15px;border:1px solid #b3a3ff66;display:grid;place-items:center;color:#d2c9ff;font-size:23px;margin:0 auto 25px;box-shadow:0 0 35px #8b5cf633;transition:transform .3s}.closing-card:hover .closing-orb{transform:translateY(-3px)}.closing-card .eyebrow{justify-content:center}.closing h2{margin:20px 0}.closing-card>p{color:var(--muted);font-size:13px;max-width:430px;line-height:1.8;margin:0 auto 25px}.closing-foot{font-size:8px;color:#687493;margin-top:65px;letter-spacing:2px}.closing-foot span{color:var(--purple);padding:0 8px}
 
-      <!-- Real-Time Telemetry HUD -->
-      <section class="telemetry-row">
-        <div class="telemetry-card">
-          <span class="tele-tag">Gateway Latency</span>
-          <span class="tele-stat" id="statPing">~38 ms</span>
-        </div>
-        <div class="telemetry-card">
-          <span class="tele-tag">Monitored Channel</span>
-          <span class="tele-stat" title="UCA5BfytqBCeMitzfGPo2dTA">@possiblymira</span>
-        </div>
-        <div class="telemetry-card">
-          <span class="tele-tag">Polling Engine</span>
-          <span class="tele-stat">300s RSS / 1800s API</span>
-        </div>
-        <div class="telemetry-card">
-          <span class="tele-tag">Reverse Proxy</span>
-          <span class="tele-stat">Port :25888</span>
-        </div>
-      </section>
+    .footer{min-height:85px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;color:#7f8aa4;font-size:10px}.footer .brand{font-size:19px;color:var(--text)}.footer-right{font:8px "DM Mono";letter-spacing:1px;display:flex;flex-direction:column;gap:5px;text-align:right}.credit{font:8px "DM Mono";letter-spacing:.7px;color:#8c98b3}.discord-contact{color:#c3b5ff;font-weight:700}
 
-      <!-- Live Feed / Activity Section -->
-      <section class="section-wrap" id="activity">
-        <div class="section-header-row">
-          <div>
-            <div class="section-eyebrow">Real-Time Dispatch Feed</div>
-            <h2 class="section-headline">Tracked Releases & Broadcasts</h2>
-          </div>
+    .signal-section{padding:100px 0 115px}.signal-heading{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:30px}.signal-heading h2{font-size:clamp(42px,5vw,62px);letter-spacing:-4px;line-height:1.05;margin:17px 0}.signal-heading p{color:var(--muted);font-size:13px;line-height:1.8;max-width:430px;margin:0}.signal-tag{font:9px "DM Mono";letter-spacing:1px;color:#f1c88d;border:1px solid #f1c88d38;border-radius:30px;padding:10px 13px;white-space:nowrap}.signal-tag i,.status-value i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#f1c88d;margin-right:7px}.signal-tag.is-online{color:#8ee5c3;border-color:#8ee5c344}.signal-tag.is-offline{color:#ff9aa9;border-color:#ff738744}.signal-tag.is-online i{background:#8ee5c3}.signal-tag.is-offline i{background:#ff7387}
+    .control-panel{border:1px solid #a78bfa35;border-radius:15px;background:radial-gradient(ellipse at 20% 45%,#7764d51b,transparent 42%),#0c1121;overflow:hidden;box-shadow:0 25px 80px #0003}.control-top,.control-bottom{display:flex;justify-content:space-between;gap:15px;padding:16px 21px;font:9px "DM Mono";letter-spacing:1px;color:#7f8ca9}.control-top{border-bottom:1px solid var(--line);color:#c3cbe0}.control-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--purple);margin-right:9px;box-shadow:0 0 12px var(--purple)}.mono{color:#697693}.control-main{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:35px;padding:35px 7%}
+    .radar{width:min(280px,100%);aspect-ratio:1;border:1px solid #9d8aff36;border-radius:50%;position:relative;margin:auto;background:radial-gradient(circle,#a78bfa0b 0 35%,transparent 36%),repeating-radial-gradient(circle,transparent 0 39px,#9d8aff22 40px 41px);overflow:hidden}.radar:before,.radar:after{content:"";position:absolute;background:#a78bfa25}.radar:before{width:1px;height:100%;left:50%}.radar:after{height:1px;width:100%;top:50%}.radar-ring{position:absolute;border:1px solid #9d8aff22;border-radius:50%;inset:25%}.ring-b{inset:12%}.ring-c{inset:38%}.radar-sweep{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 76%,#a78bfa22 88%,#a78bfa00 100%);animation:radar-spin 9s linear infinite}.radar-center{position:absolute;inset:0;display:grid;place-items:center;color:#d8ceff;font-size:25px;text-shadow:0 0 20px var(--purple)}.radar-blip{position:absolute;width:6px;height:6px;border-radius:50%;background:#8ee5c3;box-shadow:0 0 12px #8ee5c3}.blip-a{top:29%;left:63%}.blip-b{top:67%;left:34%;background:#a78bfa;box-shadow:0 0 12px #a78bfa}
+    .control-copy h3{font-size:34px;line-height:1.08;letter-spacing:-1.5px;margin:17px 0}.control-copy h3 em{font-style:normal;color:var(--purple)}.status-label,.status-value{font:9px "DM Mono";letter-spacing:1px;color:#8591ac}.status-line{display:flex;flex-wrap:wrap;gap:12px;align-items:center}.status-value{color:#f1c88d}.status-value.is-online{color:#8ee5c3}.status-value.is-offline{color:#ff9aa9}.status-value.is-online i{background:#8ee5c3;box-shadow:0 0 12px #8ee5c3}.status-value.is-offline i{background:#ff7387;box-shadow:0 0 12px #ff7387}.control-copy>p{font-size:12px;line-height:1.85;color:var(--muted);max-width:430px}.status-meta{display:flex;gap:22px;flex-wrap:wrap;margin-top:25px;padding-top:17px;border-top:1px solid var(--line)}.status-meta span{font:8px "DM Mono";letter-spacing:1px;color:#74819c}.status-meta b{display:block;font-size:11px;color:#dce2f2;margin-top:7px}.control-bottom{border-top:1px solid var(--line);font-size:8px;color:#6e7a95}
+    .radar.is-online .radar-blip{background:#8ee5c3;box-shadow:0 0 14px #8ee5c3}.radar.is-offline .radar-blip{background:#ff7387;box-shadow:0 0 14px #ff7387}
 
-          <div class="filter-tabs">
-            <button class="filter-tab active" onclick="filterFeed('all', this)">All Releases</button>
-            <button class="filter-tab" onclick="filterFeed('live', this)">🔴 Streams</button>
-            <button class="filter-tab" onclick="filterFeed('cover', this)">🎵 Covers</button>
-          </div>
-        </div>
+    .preview-copy h2{font-size:clamp(42px,5vw,62px);letter-spacing:-4px;line-height:1.05;margin:17px 0}.preview-copy>p{color:var(--muted);font-size:13px;line-height:1.8;max-width:430px;margin:0}
+    .source-heading h2{font-size:clamp(42px,5vw,62px);letter-spacing:-4px;line-height:1.05;margin:17px 0}.source-heading>p{color:var(--muted);font-size:13px;line-height:1.8;max-width:430px;margin:0}
+    .contact-strip{display:flex;align-items:center;justify-content:center;gap:13px;margin:35px auto 0;padding:13px 18px;width:max-content;max-width:100%;border:1px solid #a78bfa38;border-radius:9px;background:#090e1c99}.contact-kicker,.contact-platform{font:8px "DM Mono";letter-spacing:1.2px;color:#7885a2}.contact-strip strong{font-size:12px;color:#d5ccff;display:flex;align-items:center;gap:9px}.contact-strip strong .bi{font-size:18px;color:#c3b5ff}.contact-platform{padding-left:12px;border-left:1px solid var(--line)}
 
-        <div class="feed-grid" id="feedGrid">
-          <!-- Item 1 -->
-          <a href="https://www.youtube.com/watch?v=CvFDMAoyJ8Y" target="_blank" rel="noopener" class="video-card-item feed-item live">
-            <div class="card-thumb-wrap">
-              <span class="card-badge badge-live">🔴 LIVESTREAM</span>
-              <img src="https://i.ytimg.com/vi/CvFDMAoyJ8Y/hqdefault.jpg" alt="Video">
-            </div>
-            <div class="card-content-wrap">
-              <div class="card-title">are we in a cult now?? | Tiny Bunny (CHAPTER 4)</div>
-              <div class="card-footer">
-                <span>#live-broadcasts</span>
-                <span class="card-id-tag">CvFDMAoyJ8Y</span>
-              </div>
-            </div>
-          </a>
+    /* ===== Icon hover ===== */
+    .bi{display:inline-block;vertical-align:-.125em;transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+    .bi:hover{transform:scale(1.15);text-shadow:none}
+    .discord-node:hover .discord-mark{transform:scale(1.15) rotate(-6deg)}
+    .satellite:hover .bi{transform:scale(1.2)}
+    .button-primary:hover .bi{transform:translateX(3px) scale(1.15)}
+    .button-quiet:hover .bi{transform:translateX(2px)}
+    .nav-cta:hover .bi{transform:translate(2px,-2px) scale(1.15)}
+    .repo-card:hover .repo-arrow .bi{transform:translate(2px,-2px) scale(1.2)}
+    .repo-card:hover .repo-link .bi{transform:translate(2px,-2px)}
+    .contact-strip:hover .bi{transform:scale(1.2) rotate(-8deg)}
+    .live-icon:hover{animation-play-state:paused}
 
-          <!-- Item 2 -->
-          <a href="https://www.youtube.com/watch?v=KuJSTS5AUt4" target="_blank" rel="noopener" class="video-card-item feed-item cover">
-            <div class="card-thumb-wrap">
-              <span class="card-badge badge-cover">🎵 COVER SONG</span>
-              <img src="https://i.ytimg.com/vi/KuJSTS5AUt4/hqdefault.jpg" alt="Video">
-            </div>
-            <div class="card-content-wrap">
-              <div class="card-title">Official Music Cover Premiere (#miracle_melody)</div>
-              <div class="card-footer">
-                <span>#music-covers</span>
-                <span class="card-id-tag">KuJSTS5AUt4</span>
-              </div>
-            </div>
-          </a>
+    @media(prefers-reduced-motion:reduce){.bi,.bi:hover,.feature-card,.step,.satellite{transition:none;transform:none!important}.live-icon{animation:none}.radar-sweep{animation:none}html{scroll-behavior:auto}}
 
-          <!-- Item 3 -->
-          <a href="https://www.youtube.com/watch?v=f13ZPDXgufM" target="_blank" rel="noopener" class="video-card-item feed-item live">
-            <div class="card-thumb-wrap">
-              <span class="card-badge badge-live">🔴 BROADCAST</span>
-              <img src="https://i.ytimg.com/vi/f13ZPDXgufM/hqdefault.jpg" alt="Video">
-            </div>
-            <div class="card-content-wrap">
-              <div class="card-title">Special Interactive Community Live Stream</div>
-              <div class="card-footer">
-                <span>#live-broadcasts</span>
-                <span class="card-id-tag">f13ZPDXgufM</span>
-              </div>
-            </div>
-          </a>
-
-          <!-- Item 4 -->
-          <a href="https://www.youtube.com/watch?v=2AwfogFKbj0" target="_blank" rel="noopener" class="video-card-item feed-item cover">
-            <div class="card-thumb-wrap">
-              <span class="card-badge badge-cover">🎵 PREMIERE</span>
-              <img src="https://i.ytimg.com/vi/2AwfogFKbj0/hqdefault.jpg" alt="Video">
-            </div>
-            <div class="card-content-wrap">
-              <div class="card-title">Featured Song Premiere & Live Community Chat</div>
-              <div class="card-footer">
-                <span>#music-covers</span>
-                <span class="card-id-tag">2AwfogFKbj0</span>
-              </div>
-            </div>
-          </a>
-        </div>
-      </section>
-
-      <!-- Architecture Stepper -->
-      <section class="section-wrap" id="architecture">
-        <div class="section-header-row">
-          <div>
-            <div class="section-eyebrow">Engine Workflow</div>
-            <h2 class="section-headline">How Cosmopings Dispatches Updates</h2>
-          </div>
-        </div>
-
-        <div class="arch-flow-box">
-          <div class="stepper-row">
-            <div class="stepper-item">
-              <div class="step-number">01</div>
-              <div class="step-title">Atom XML Ingest</div>
-              <div class="step-desc">Pulls high-frequency RSS atom feeds every 300 seconds with zero YouTube Data API quota cost.</div>
-            </div>
-
-            <div class="stepper-item">
-              <div class="step-number">02</div>
-              <div class="step-title">JSON State Filter</div>
-              <div class="step-desc">Verifies against <code>posted.json</code> to ensure zero duplicated pings across container restarts.</div>
-            </div>
-
-            <div class="stepper-item">
-              <div class="step-number">03</div>
-              <div class="step-title">Shorts Duration Shield</div>
-              <div class="step-desc">Parses ISO 8601 duration; discards YouTube Shorts under 60 seconds and historical backlogs older than 24h.</div>
-            </div>
-
-            <div class="stepper-item">
-              <div class="step-number">04</div>
-              <div class="step-title">Smart Classifier</div>
-              <div class="step-desc">Inspects hashtags (<code>#miracle_melody</code> vs <code>#miracle_live</code>) to route to dedicated Discord channels.</div>
-            </div>
-
-            <div class="stepper-item">
-              <div class="step-number">05</div>
-              <div class="step-title">Discord Gateway</div>
-              <div class="step-desc">Dispatches dynamic localized relative timestamps (<code>&lt;t:unix:R&gt;</code>) for worldwide viewers.</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Interactive Microservice Console -->
-      <section class="section-wrap" id="console">
-        <div class="section-header-row">
-          <div>
-            <div class="section-eyebrow">Developer Console</div>
-            <h2 class="section-headline">Interactive Microservice Terminal</h2>
-          </div>
-        </div>
-
-        <div class="terminal-box">
-          <div class="terminal-header">
-            <div class="terminal-dots">
-              <span class="t-dot t-red"></span>
-              <span class="t-dot t-yellow"></span>
-              <span class="t-dot t-green"></span>
-            </div>
-            <div class="terminal-tabs">
-              <button class="term-tab active" id="tabHealth" onclick="queryEndpoint('/health', this)">curl /health</button>
-              <button class="term-tab" id="tabStatus" onclick="queryEndpoint('/api/status', this)">curl /api/status</button>
-            </div>
-          </div>
-          <pre class="terminal-body" id="termViewport">Pinging Cosmopings microservice on port 25888...</pre>
-        </div>
-      </section>
-    </main>
-
-    <!-- Footer -->
-    <footer class="site-footer">
-      <div class="footer-inner">
-        <div class="footer-brand">
-          <span class="footer-name">COSMOPINGS</span>
-          <span class="footer-tagline">Engineered by palmtreepaniko • Built for the Mira Community</span>
-        </div>
-        <ul class="footer-nav">
-          <li><a href="https://github.com/palmtreepaniko/cosmopings" target="_blank" rel="noopener">GitHub</a></li>
-          <li><a href="https://www.youtube.com/@possiblymira" target="_blank" rel="noopener">YouTube (@possiblymira)</a></li>
-          <li><a href="/health">Health Endpoint</a></li>
-          <li><a href="/api/status">Status API</a></li>
-        </ul>
-      </div>
-    </footer>
-  </div>
+    @keyframes radar-spin{to{transform:rotate(360deg)}}
+    @media(max-width:760px){.wrap{width:min(100% - 36px,560px)}.topbar{height:72px}nav{display:none}.hero{grid-template-columns:1fr;min-height:auto;padding-top:45px}.hero-copy{padding:35px 0 0}.hero h1{font-size:68px;letter-spacing:-5px}.hero-lede{font-size:13px}.orbit-scene{height:350px;margin-top:-5px;transform:scale(.85)}.section{padding:85px 0}.section-heading{grid-template-columns:1fr;gap:15px}.section-heading .eyebrow{grid-column:auto}.section-heading p{max-width:460px}.feature-grid{grid-template-columns:1fr}.feature-card{min-height:250px}.how-section{padding:85px 0}.how-layout{grid-template-columns:1fr;gap:45px}.closing{padding:75px 0}.closing-card{padding:55px 18px 25px}.footer{gap:14px;flex-wrap:wrap;padding:20px 0}.footer>span:nth-child(2){display:none}.signal-section,.source-section{padding:75px 0}.signal-heading,.source-heading{display:block}.signal-tag{display:inline-block;margin-top:22px}.control-main{grid-template-columns:1fr;gap:25px;padding:28px 22px}.radar{width:210px}.control-copy h3{font-size:30px}.preview-section{padding:75px 0}.preview-layout{grid-template-columns:1fr;gap:35px}.discord-window{transform:none}.source-heading>p{margin-top:15px}.repo-grid{grid-template-columns:1fr}.source-foot{flex-direction:column}.control-top,.control-bottom{font-size:7px;padding:13px}.status-meta{gap:16px}.footer-right{text-align:left}.footer{align-items:flex-start}.footer-right{font-size:7px}}
+    @media(max-width:420px){.hero h1{font-size:57px}.hero-actions{align-items:stretch;flex-direction:column;width:max-content}.orbit-scene{margin-inline:-35px;transform:scale(.73)}.feature-card{padding:22px}.card-index{right:22px}.closing h2{font-size:48px}.contact-strip{gap:9px;padding:12px}.contact-kicker,.contact-platform{font-size:7px}}
+  </style>
 
   <script>
-    // Reaction Button Clicker
-    function toggleReaction(el) {
-      el.classList.toggle('active');
-      const countEl = el.querySelector('.rx-count');
-      let count = parseInt(countEl.textContent, 10);
-      countEl.textContent = el.classList.contains('active') ? count + 1 : count - 1;
+    const year = document.getElementById("year");
+    if (year) year.textContent = "2026";
+
+    const STATUS_URL = "https://2ekkusjbrm.apps.bot-hosting.cloud/api/status";
+    const signalTag = document.getElementById("signal-tag");
+    const monitorCaption = document.getElementById("monitor-caption");
+    const presence = document.getElementById("bot-presence");
+    const headline = document.getElementById("signal-headline");
+    const description = document.getElementById("signal-description");
+    const uptime = document.getElementById("bot-uptime");
+    const latency = document.getElementById("bot-latency");
+    const posted = document.getElementById("bot-posted");
+    const signalLink = document.getElementById("signal-link");
+    const lastCheck = document.getElementById("last-check");
+    const radar = document.querySelector(".radar");
+
+    function formatUptime(totalSeconds) {
+      const seconds = Math.max(0, Number(totalSeconds) || 0);
+      const days = Math.floor(seconds / 86400);
+      const hours = Math.floor((seconds % 86400) / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      return days ? days + "d " + hours + "h" : hours ? hours + "h " + minutes + "m" : minutes + "m";
     }
 
-    // Filter Feed Tabs
-    function filterFeed(category, btn) {
-      document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      const items = document.querySelectorAll('.feed-item');
-      items.forEach(item => {
-        if (category === 'all' || item.classList.contains(category)) {
-          item.style.display = 'flex';
-        } else {
-          item.style.display = 'none';
-        }
-      });
+    function showUnavailable() {
+      signalTag.className = "signal-tag is-offline";
+      signalTag.innerHTML = "<i></i> STATUS UNAVAILABLE";
+      monitorCaption.textContent = "UPDATES EVERY 30 SECONDS · NO RESPONSE";
+      presence.className = "status-value is-offline";
+      presence.innerHTML = "<i></i> Can't reach the host";
+      headline.innerHTML = "Can't <em>reach it.</em>";
+      description.textContent = "The status page didn't respond. The bot might still be running. The host could just be restarting.";
+      uptime.textContent = "—";
+      latency.textContent = "—";
+      posted.textContent = "—";
+      signalLink.innerHTML = '<i class="bi bi-broadcast-pin"></i> Link: unreachable';
+      lastCheck.textContent = "Last checked: " + new Date().toLocaleTimeString();
+      radar.classList.remove("is-online");
+      radar.classList.add("is-offline");
     }
 
-    // Terminal Endpoint Query
-    const termViewport = document.getElementById('termViewport');
-    const statPing = document.getElementById('statPing');
-    const navStatus = document.getElementById('navStatus');
-
-    async function queryEndpoint(url, btn) {
-      if (btn) {
-        document.querySelectorAll('.term-tab').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-      }
-
-      termViewport.textContent = `--> Connecting to 2ekkusjbrm.apps.bot-hosting.cloud:25888...\n--> GET ${url} HTTP/1.1\n\n`;
+    async function updateBotStatus() {
       try {
-        const res = await fetch(url);
-        const data = await res.json();
-        termViewport.textContent += `HTTP/1.1 ${res.status} OK\nContent-Type: application/json\n\n` + JSON.stringify(data, null, 2);
-        return data;
-      } catch (e) {
-        const fallback = url.includes('health')
-          ? { status: "healthy", service: "cosmopings", port: 25888, bot_online: true, uptime_seconds: 1820 }
-          : { online: true, bot_user: "Cosmopings#0000", ping_ms: 38.2, posted_count: 14, scheduled_count: 0 };
-        termViewport.textContent += `HTTP/1.1 200 OK (Local Evaluation)\nContent-Type: application/json\n\n` + JSON.stringify(fallback, null, 2);
-        return fallback;
+        const response = await fetch(STATUS_URL, { cache: "no-store", signal: AbortSignal.timeout(8000) });
+        if (!response.ok) throw new Error("Status endpoint returned " + response.status);
+        const data = await response.json();
+        const online = data.online === true;
+
+        signalTag.className = "signal-tag " + (online ? "is-online" : "is-offline");
+        signalTag.innerHTML = online ? "<i></i> ONLINE" : "<i></i> OFFLINE";
+        monitorCaption.textContent = "UPDATES EVERY 30 SECONDS";
+        presence.className = "status-value " + (online ? "is-online" : "is-offline");
+        presence.innerHTML = online ? "<i></i> Connected to Discord" : "<i></i> Not ready yet";
+        headline.innerHTML = online ? "Everything is<br><em>running.</em>" : "Bot is <em>offline.</em>";
+        description.textContent = online
+          ? "The bot is connected to Discord right now. These numbers come from the bot's own process."
+          : "The status page responded, but the bot isn't ready yet.";
+        uptime.textContent = formatUptime(data.uptime_seconds);
+        latency.textContent = Number.isFinite(Number(data.ping_ms)) ? Math.round(Number(data.ping_ms)) + " ms" : "—";
+        posted.textContent = Number.isFinite(Number(data.posted_count)) ? Number(data.posted_count).toLocaleString() : "—";
+        signalLink.innerHTML = '<i class="bi bi-broadcast-pin"></i> Link: ' + (online ? "connected" : "responding, not ready");
+        lastCheck.textContent = "Last checked: " + new Date().toLocaleTimeString();
+        radar.classList.toggle("is-online", online);
+        radar.classList.toggle("is-offline", !online);
+      } catch (error) {
+        showUnavailable();
       }
     }
 
-    async function init() {
-      const data = await queryEndpoint('/health');
-      try {
-        const res = await fetch('/api/status');
-        const d = await res.json();
-        if (d.ping_ms) statPing.textContent = `${Math.round(d.ping_ms)} ms`;
-      } catch(e) {}
-    }
-
-    init();
+    updateBotStatus();
+    setInterval(updateBotStatus, 30000);
   </script>
+
+  <div class="stars" aria-hidden="true"></div>
+  <header class="topbar wrap">
+    <a class="brand" href="#" aria-label="Cosmopings home">
+      <span class="brand-mark"><span></span><span></span><span></span></span>
+      <span>cosmopings<span class="brand-dot">.</span></span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#signal">Status</a>
+      <a href="#source">GitHub</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="nav-cta" href="https://github.com/palmtreepaniko/cosmopings" target="_blank" rel="noopener">Source code <span><i class="bi bi-arrow-up-right"></i></span></a>
+  </header>
+
+  <main>
+    <section class="hero wrap">
+      <div class="hero-copy">
+        <h1>Never miss<br><em>a moment!</em></h1>
+        <p class="hero-lede">Cosmopings notifies your Discord server when a YouTube channel posts a new cover or goes live.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="https://github.com/palmtreepaniko/cosmopings" target="_blank" rel="noopener">Explore the bot<i class="bi bi-arrow-up-right"></i></a>
+          <a class="button button-quiet" href="#features">See its features</a>
+        </div>
+      </div>
+      <div class="orbit-scene" aria-label="Illustration of a YouTube upload being sent to Discord">
+        <div class="orbit orbit-one"></div>
+        <div class="orbit orbit-two"></div>
+        <div class="planet">
+          <div class="planet-glow"></div>
+          <span class="planet-symbol">✦</span>
+        </div>
+        <div class="satellite sat-youtube">
+          <i class="bi bi-youtube"></i>
+          <small>NEW COVER</small>
+        </div>
+        <div class="satellite sat-live">
+          <i class="bi bi-broadcast live-icon"></i>
+          <small>LIVE NOW</small>
+        </div>
+        <div class="signal-line"></div>
+        <div class="discord-node">
+          <i class="bi bi-discord discord-mark"></i>
+          <small>DISCORD</small>
+        </div>
+        <div class="tiny-star star-a">✦</div>
+        <div class="tiny-star star-b">✧</div>
+        <div class="tiny-star star-c">·</div>
+      </div>
+    </section>
+
+    <section class="ticker" aria-label="What Cosmopings does">
+      <div class="ticker-inner"><span>WATCHES YOUTUBE</span><b>✦</b><span>TELLS COVERS FROM STREAMS</span><b>✦</b><span>POSTS TO DISCORD</span><b>✦</b><span>HANDLES SCHEDULED STREAMS</span><b>✦</b><span>WATCHES YOUTUBE</span><b>✦</b><span>TELLS COVERS FROM STREAMS</span></div>
+    </section>
+
+    <section class="signal-section wrap" id="signal">
+      <div class="signal-heading">
+        <div>
+          <div class="eyebrow">LIVE STATUS</div>
+          <h2>Bot <em>status.</em></h2>
+          <p>A quick look at whether the bot is running right now.</p>
+        </div>
+        
+      </div>
+      <div class="control-panel">
+        <div class="control-top">
+          <span><b class="control-dot"></b> COSMOPINGS STATUS</span>
+          <span class="mono" id="monitor-caption">CHECKING</span>
+        </div>
+        <div class="control-main">
+          <div class="radar">
+            <div class="radar-ring ring-a"></div>
+            <div class="radar-ring ring-b"></div>
+            <div class="radar-ring ring-c"></div>
+            <div class="radar-sweep"></div>
+            <span class="radar-center">✦</span>
+            <i class="radar-blip blip-a"></i>
+            <i class="radar-blip blip-b"></i>
+          </div>
+          <div class="control-copy">
+            <div class="status-line">
+              <span class="status-label">DISCORD CONNECTION</span>
+              <span class="status-value" id="bot-presence"><i></i> Connecting…</span>
+            </div>
+            <h3 id="signal-headline">Checking<br><em>the bot…</em></h3>
+            <p id="signal-description">Connecting to the status page. This will update as soon as the bot host responds.</p>
+            <div class="status-meta">
+              <span>UPTIME <b id="bot-uptime">—</b></span>
+              <span>LATENCY <b id="bot-latency">—</b></span>
+              <span>VIDEOS POSTED <b id="bot-posted">—</b></span>
+            </div>
+          </div>
+        </div>
+        <div class="control-bottom">
+          <span id="signal-link"><i class="bi bi-broadcast-pin"></i> Link: starting</span>
+          <span id="last-check">Waiting for the first response</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section wrap" id="features">
+      <div class="section-heading">
+        <div class="eyebrow">01 / WHAT IT DOES</div>
+        <h2>From YouTube<br><em>to Discord.</em></h2>
+        <p>The bot keeps an eye on YouTube so your community doesn't have to keep refreshing channel pages.</p>
+      </div>
+      <div class="feature-grid">
+        <article class="feature-card feature-large">
+          <div class="feature-icon icon-orbit"><i class="bi bi-eye"></i></div>
+          <div class="card-index">01 / WATCH</div>
+          <h3>It watches<br>the channel for you.</h3>
+          <p>Pick the YouTube channels you care about. The bot checks them for new uploads and streams.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon icon-bell"><i class="bi bi-bell"></i></div>
+          <div class="card-index">02 / NOTIFY</div>
+          <h3>Each post goes<br>where it belongs.</h3>
+          <p>Covers and streams can go to separate channels, so nothing gets buried.</p>
+          <div class="channel-preview"><span class="hash">#</span> new-covers <i class="bi bi-check2 channel-check"></i></div>
+          <div class="channel-preview"><span class="hash">#</span> livestreams <i class="bi bi-check2 channel-check"></i></div>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon icon-spark"><i class="bi bi-magic"></i></div>
+          <div class="card-index">03 / SORT</div>
+          <h3>It can tell<br>what it found.</h3>
+          <p>The bot works out whether a new upload is a cover or a livestream.</p>
+          <div class="type-pills">
+            <span><i class="bi bi-music-note-beamed"></i>COVER</span>
+            <span><i class="bi bi-broadcast"></i>LIVE</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="how-section" id="how">
+      <div class="wrap how-layout">
+        <div>
+          <div class="eyebrow">02 / SETUP</div>
+          <h2>Three steps.<br><em>Easy-peasy!</em></h2>
+          <p class="section-intro">Set it up once. After that, the bot handles the watching and the posting.</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-number">01</span>
+            <div><h3>Pick a YouTube channel</h3><p>Tell the bot which channel your server should follow.</p></div>
+            <span class="step-symbol"><i class="bi bi-youtube"></i></span>
+          </div>
+          <div class="step">
+            <span class="step-number">02</span>
+            <div><h3>Choose your Discord channels</h3><p>Pick where covers and streams should get posted.</p></div>
+            <span class="step-symbol"><i class="bi bi-signpost-split"></i></span>
+          </div>
+          <div class="step">
+            <span class="step-number">03</span>
+            <div><h3>Then just wait</h3><p>The bot checks for updates and posts them to your server when they show up.</p></div>
+            <span class="step-symbol"><i class="bi bi-bell-fill"></i></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="preview-section">
+      <div class="wrap preview-layout">
+        <div class="preview-copy">
+          <div class="eyebrow">03 / EXAMPLE</div>
+          <h2>What a post<br><em>looks like.</em></h2>
+          <p>This is roughly how a notification appears in a Discord channel.</p>
+          <span class="preview-note">EXAMPLE ONLY · NOT A LIVE MESSAGE</span>
+        </div>
+        <div class="discord-window">
+          <div class="discord-window-top">
+            <span class="window-lights"><i></i><i></i><i></i></span>
+            <span>YOUR SERVER / # new-covers</span>
+            <span>•••</span>
+          </div>
+          <div class="discord-message">
+            <div class="bot-avatar"><i class="bi bi-robot"></i></div>
+            <div class="message-content">
+              <div class="message-author">cosmopings <span>APP</span> <time>Today at 20:41</time></div>
+              <div class="embed-card">
+                <div class="embed-kicker"><i></i> NEW COVER</div>
+                <h3>A new cover is up!</h3>
+                <p>A channel you follow just posted a new cover, go give it a listen!</p>
+                <div class="video-placeholder">
+                  <span><i class="bi bi-play-fill"></i></span>
+                  <small>YOUTUBE VIDEO PREVIEW</small>
+                </div>
+                <div class="embed-footer">SENT AUTOMATICALLY FROM YOUTUBE</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="source-section wrap" id="source">
+      <div class="source-heading">
+        <div class="eyebrow">04 / SOURCE</div>
+        <h2>It's open source.<br><em>Take a look!</em></h2>
+        <p>Read the code, fork it or build your own version.</p>
+      </div>
+      <div class="repo-grid">
+        <a class="repo-card" href="https://github.com/palmtreepaniko/cosmopings" target="_blank" rel="noopener">
+          <div class="repo-top">
+            <span class="repo-icon"><i class="bi bi-github"></i></span>
+            <span class="repo-arrow"><i class="bi bi-arrow-up-right"></i></span>
+          </div>
+          <span class="repo-label">THE BOT</span>
+          <h3>cosmopings</h3>
+          <p>The Discord bot source code.</p>
+          <span class="repo-link">VIEW REPOSITORY <i class="bi bi-arrow-up-right"></i></span>
+        </a>
+        <a class="repo-card" href="https://github.com/palmtreepaniko/cosmopings-website" target="_blank" rel="noopener">
+          <div class="repo-top">
+            <span class="repo-icon"><i class="bi bi-globe2"></i></span>
+            <span class="repo-arrow"><i class="bi bi-arrow-up-right"></i></span>
+          </div>
+          <span class="repo-label">THIS WEBSITE</span>
+          <h3>cosmopings-website</h3>
+          <p>This landing page. It's static and hosted on GitHub Pages.</p>
+          <span class="repo-link">VIEW WEBSITE CODE <i class="bi bi-arrow-up-right"></i></span>
+        </a>
+      </div>
+      <div class="source-foot"><span>OPEN SOURCE</span><span>FORK IT, LEARN FROM IT AND CHANGE IT!</span></div>
+    </section>
+
+<section class="closing wrap" id="faq">
+  <div class="closing-card">
+    <div class="closing-orb">✦</div>
+
+    <div class="faq-heading">
+      <span class="section-kicker">GOT QUESTIONS?</span>
+      <h2>A few things<br><em>you might be wondering.</em></h2>
+    </div>
+
+    <div class="faq-mini">
+      <details><summary>What exactly does Cosmopings do?</summary><p>It keeps an eye on a YouTube channel and lets your Discord server know whenever there's a new cover or livestream. You can even send each type of update to its own channel, so everything stays organized.</p></details>
+      <details><summary>Does the status panel show the actual bot status?</summary><p>Yep! It checks the bot through its hosting service. If the server doesn't respond, the panel will say the status is unavailable instead of pretending everything is fine.</p></details>
+      <details><summary>Is the bot hosted on this website?</summary><p>Nope. The website and the bot are hosted separately. The website runs on GitHub Pages, while the bot has its own hosting service.</p></details>
+      <details><summary>Can I run my own copy?</summary><p>Of course! The source code is public, so feel free to clone the repository, set it up for your own Discord server, and make whatever changes you need.</p></details>
+      <details><summary>How does it know whether something is a cover or a livestream?</summary><p>It checks things like keywords, hashtags, and YouTube's livestream information to figure out what kind of content was posted. That way, each update goes where it's supposed to.</p></details>
+      <details><summary>Found a bug or need help?</summary><p>You can reach me on Discord: <strong>palmtree_panik</strong>. Feel free to get in touch if something isn't working or you have a question!</p></details>
+    </div>
+
+    <div class="closing-foot">COSMOPINGS <span>·</span> YOUTUBE x DISCORD</div>
+  </div>
+</section>
+  </main>
+
+  <footer class="footer wrap">
+    <a class="brand" href="#" aria-label="Cosmopings home">
+      <span class="brand-mark"><span></span><span></span><span></span></span>
+      <span>cosmopings<span class="brand-dot">.</span></span>
+    </a>
+    <span class="footer-right">© 2026 Cosmopings. All rights reserved. <span class="credit">Made by palmtreepaniko.</span></span>
+  </footer>
+
+  <script src="script.js"></script>
 </body>
 </html>
