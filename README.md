@@ -1,4 +1,4 @@
-# Cosmopings 🌌
+# Cosmopings
 
 A specialized Discord bot that monitors a YouTube channel and automatically notifies designated Discord channels when a new cover or livestream is published.
 
