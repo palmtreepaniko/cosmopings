@@ -162,6 +162,26 @@ def get_video_details(video_id):
         return None
     return response["items"][0]
 
+async def notification_already_sent(channel, video_id, marker):
+    """Check recent bot messages so a restart cannot repeat an announcement
+    even if the hosting service resets the local JSON tracking files."""
+    video_url = f"https://www.youtube.com/watch?v={video_id}"
+    try:
+        async for message in channel.history(limit=200):
+            if (
+                bot.user is not None
+                and message.author.id == bot.user.id
+                and video_url in message.content
+                and marker in message.content
+            ):
+                print(f"  {video_id}: matching Discord announcement already exists; skipping duplicate")
+                return True
+    except discord.Forbidden:
+        print(f"  {video_id}: cannot check channel history; grant Cosmopings Read Message History.")
+    except discord.HTTPException as e:
+        print(f"  {video_id}: could not check channel history: {e}")
+    return False
+
 @tasks.loop(seconds=CHECK_INTERVAL)
 async def check_youtube():
     global cycle_count
@@ -229,6 +249,10 @@ async def check_youtube():
                         posted.append(video_id)
                         continue
 
+                    marker = "just dropped a new cover!" if content_type == "cover" else "is LIVE right now!"
+                    if await notification_already_sent(channel, video_id, marker):
+                        posted.append(video_id)
+                        continue
                     message = (
                         f"🎵 MIRA just dropped a new cover! Go check it out~\n{video_url}"
                         if content_type == "cover"
@@ -236,11 +260,24 @@ async def check_youtube():
                     )
                     await channel.send(message)
                     posted.append(video_id)
+                    save_json("posted.json", posted)
                     print(f"Catch-up notification sent for {video_id}")
                     continue
 
                 unix_ts = int(dt_utc.timestamp())
                 date_str = dt_utc.strftime('%d/%m/%Y %H:%M')
+
+                marker = "is premiering a new cover on" if content_type == "cover" else "will be 🔴 LIVE on"
+                if await notification_already_sent(channel, video_id, marker):
+                    scheduled.append({
+                        "video_id": video_id,
+                        "time": scheduled_time,
+                        "type": content_type,
+                        "channel_id": channel_id,
+                        "notified": False
+                    })
+                    scheduled_ids.add(video_id)
+                    continue
 
                 message = (
                         f"🎵 MIRA is premiering a new cover on {date_str} (GMT), which is <t:{unix_ts}:R>! Don't miss it!~\n{video_url}"
@@ -249,6 +286,13 @@ async def check_youtube():
                     )
                 await channel.send(message)
                 print(f"Scheduled notification sent for {video_id}")
+                save_json("scheduled.json", scheduled + [{
+                    "video_id": video_id,
+                    "time": scheduled_time,
+                    "type": content_type,
+                    "channel_id": channel_id,
+                    "notified": False
+                }])
 
                 scheduled.append({
                     "video_id": video_id,
@@ -269,9 +313,14 @@ async def check_youtube():
                         posted.append(video_id)
                         continue
 
+                marker = "just dropped a new cover!" if content_type == "cover" else "is live right now!"
+                if await notification_already_sent(channel, video_id, marker):
+                    posted.append(video_id)
+                    continue
                 message = f"🎵 MIRA just dropped a new cover! Go check it out~\n{video_url}" if content_type == "cover" else f"🔴 MIRA is live right now! Come join her~\n{video_url}"
                 await channel.send(message)
                 posted.append(video_id)
+                save_json("posted.json", posted)
                 print(f"Immediate upload notification sent for {video_id}")
 
         save_json("posted.json", posted)
@@ -304,12 +353,17 @@ async def check_scheduled_start():
             elif not notified and datetime.now(timezone.utc) >= dt_utc:
                 channel = bot.get_channel(channel_id)
                 if channel:
-                    message = f"🎵 MIRA just dropped a new {content_type}! Go check it out~\n https://www.youtube.com/watch?v={video_id}" if content_type == "cover" else f"🔴 MIRA is live right now! Come join her~\n https://www.youtube.com/watch?v={video_id}"
-                    await channel.send(message)
-                    print(f"START notification sent for {video_id}")
-                    item["notified"] = True
-                    posted.append(video_id)
-                    # Save immediately after sending so a restart won't resend it.
+                    marker = "just dropped a new cover!" if content_type == "cover" else "is live right now!"
+                    if await notification_already_sent(channel, video_id, marker):
+                        item["notified"] = True
+                        posted.append(video_id)
+                    else:
+                        message = f"🎵 MIRA just dropped a new {content_type}! Go check it out~\n https://www.youtube.com/watch?v={video_id}" if content_type == "cover" else f"🔴 MIRA is live right now! Come join her~\n https://www.youtube.com/watch?v={video_id}"
+                        await channel.send(message)
+                        print(f"START notification sent for {video_id}")
+                        item["notified"] = True
+                        posted.append(video_id)
+                    # Save immediately so a restart won't resend it.
                     save_json("posted.json", posted)
                     save_json("scheduled.json", scheduled)
 
