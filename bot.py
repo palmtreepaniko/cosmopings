@@ -504,10 +504,10 @@ async def main():
     token = os.getenv("DISCORD_TOKEN")
     if not token or token.strip() == "" or "your_" in token.lower():
         print("\n" + "="*60)
-        print("❌ CRITICAL: DISCORD_TOKEN is missing or not set!")
-        print("👉 Go to your bot-hosting.cloud panel -> Startup / Variables tab")
+        print("CRITICAL: DISCORD_TOKEN is missing or not set!")
+        print("Go to your bot-hosting.cloud panel -> Startup / Variables tab")
         print("   and paste your Discord Bot Token into DISCORD_TOKEN.")
-        print("🌐 Web server is currently RUNNING on port 25888 (Website is alive!)")
+        print("Web server is currently RUNNING on port 25888 (Website is alive!)")
         print("="*60 + "\n")
         while True:
             await asyncio.sleep(3600)
@@ -516,12 +516,12 @@ async def main():
         await bot.start(token)
     except discord.errors.LoginFailure:
         print("\n" + "="*60)
-        print("❌ CRITICAL: Invalid Discord Bot Token!")
-        print("👉 Your DISCORD_TOKEN was rejected by Discord (401 Unauthorized).")
+        print("CRITICAL: Invalid Discord Bot Token!")
+        print("Your DISCORD_TOKEN was rejected by Discord (401 Unauthorized).")
         print("   1. Open: https://discord.com/developers/applications")
         print("   2. Select your Bot -> Click 'Bot' on the left menu -> Click 'Reset Token'")
         print("   3. Paste the new token into DISCORD_TOKEN in bot-hosting.cloud")
-        print("🌐 Web server is still RUNNING on port 25888 (Website is alive!)")
+        print("Web server is still RUNNING on port 25888 (Website is alive!)")
         print("="*60 + "\n")
         while True:
             await asyncio.sleep(3600)
