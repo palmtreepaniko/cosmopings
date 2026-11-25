@@ -409,6 +409,16 @@ async def ensure_rules_message():
                 return
 
         try:
+            await message.edit(embed=build_rules_embed())
+            print(f"Updated Community Rules embed: message {message.id}")
+        except discord.Forbidden:
+            print("Verification setup: Cosmopings cannot edit its rules message. Check channel permissions.")
+            return
+        except discord.HTTPException as e:
+            print(f"Verification setup: could not update the rules embed: {e}")
+            return
+
+        try:
             await message.add_reaction(VERIFICATION_EMOJI)
         except discord.Forbidden:
             print("Verification setup: Cosmopings needs Add Reactions permission.")
