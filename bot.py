@@ -334,7 +334,9 @@ def build_rules_embed():
 13. If you have any issues, please tag the mods (you can find their work windows in <#1456668824085725419>)! Don't DM them or me unless we approach you first!
 14. Don't spam and don't use this server to promote yourself!
 
-To access the server fully, react ✅! Please note that it means you agree to the rules and will take full responsibility for breaching them in the future! That's it, have a nice time and may the stars let us meet again!~ ✨"""
+To access the server fully, react ✅! 
+Please note that it means you agree to the rules and will take full responsibility for breaching them in the future! 
+That's it, have a nice time and may the stars let us meet again!~ ✨"""
 
     embed = discord.Embed(
         title="✨🌸 COMMUNITY RULES 🌸✨",
