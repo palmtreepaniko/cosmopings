@@ -336,6 +336,7 @@ def build_rules_embed():
 
 To access the server fully, react ✅! 
 Please note that it means you agree to the rules and will take full responsibility for breaching them in the future! 
+
 That's it, have a nice time and may the stars let us meet again!~ ✨"""
 
     embed = discord.Embed(
