@@ -18,6 +18,14 @@ CHANNEL_ID = "UCA5BfytqBCeMitzfGPo2dTA"
 COVER_CHANNEL_ID = 1451693094859968512
 LIVE_CHANNEL_ID = 1451693118012264610
 
+# Verification configuration
+RULES_CHANNEL_ID = 1434900258424356885
+NON_VERIFIED_ROLE_ID = 1470919158073135311
+MIRACLE_ROLE_ID = 1470919339409670302
+VERIFICATION_EMOJI = "✅"
+VERIFICATION_STATE_FILE = "verification.json"
+RULES_EMBED_COLOR = 0xBFA2DB
+
 CHECK_INTERVAL = 300      
 UPCOMING_CHECK_EVERY = 6   
 
@@ -36,6 +44,8 @@ NOTIFY_MAX_AGE_HOURS = 24
 intents = discord.Intents.default()
 intents.guilds = True
 intents.messages = True
+intents.members = True
+intents.reactions = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 cycle_count = 0
@@ -305,10 +315,173 @@ async def check_scheduled_start():
 
 
 
+
+def build_rules_embed():
+    rules_text = """Welcome, my miracles! I'm glad to have each and every one of you here, but you'll need to follow simple rules to be able to interact with others comfortably. My community is based on mutual understanding, love and support, and I'd prefer it to stay this way. 💗
+
+1. All participants must comply with Discord's Terms of Service and Community Guidelines.
+2. Be 16 or older! This server doesn't include any hostile materials, but I would like to keep an age line defined just in case.
+3. Please avoid using inappropriate or offensive nicknames/avatars.
+4. No swearing! I encourage my community to communicate in a polite way.
+5. Bullying or any kind of discrimination are strictly prohibited.
+6. No doxxing! Please avoid sending personal info about yourself, and don't try to fish it out of others.
+7. No politics! This server was created as a safe space to unwind and share your interests.
+8. Avoid parasocial behavior! I prefer our relationship to stay within "content creator-audience" borders.
+9. Don't bring other people's drama in my space, I'm not into commenting it.
+10. Don't spread hate towards me or my friends/collab partners on any of my platforms. I cherish all of them and wish our community to welcome them with the same warm attitude.
+11. Don't feed my content to AI! I'm strictly against all GEN AI instruments, as they steal from real contentmakers.
+12. Please keep comments, stream chat and server messages in English. We have an international community and I'd love you all to understand each other!
+13. If you have any issues, please tag the mods (you can find their work windows in **Text-mods-team✅**)! Don't DM them or me unless we approach you first!
+14. Don't spam and don't use this server to promote yourself!
+
+To access the server fully, react ✅! Please note that it means you agree to the rules and will take full responsibility for breaching them in the future! That's it, have a nice time and may the stars let us meet again!~ ✨"""
+
+    embed = discord.Embed(
+        title="✨🌸 COMMUNITY RULES 🌸✨",
+        description=rules_text,
+        color=RULES_EMBED_COLOR
+    )
+    return embed
+
+
+def load_verification_state():
+    if not os.path.exists(VERIFICATION_STATE_FILE):
+        return {}
+    try:
+        with open(VERIFICATION_STATE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_verification_state(state):
+    with open(VERIFICATION_STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f, indent=4)
+
+
+verification_setup_lock = asyncio.Lock()
+
+
+async def ensure_rules_message():
+    async with verification_setup_lock:
+        state = load_verification_state()
+        channel = bot.get_channel(RULES_CHANNEL_ID)
+        if channel is None:
+            try:
+                channel = await bot.fetch_channel(RULES_CHANNEL_ID)
+            except discord.NotFound:
+                print(f"Verification setup: rules channel {RULES_CHANNEL_ID} was not found.")
+                return
+            except discord.Forbidden:
+                print("Verification setup: Cosmopings cannot access the rules channel.")
+                return
+            except discord.HTTPException as e:
+                print(f"Verification setup: could not fetch rules channel: {e}")
+                return
+
+        message = None
+        saved_message_id = state.get("rules_message_id")
+        if saved_message_id:
+            try:
+                message = await channel.fetch_message(int(saved_message_id))
+            except discord.NotFound:
+                message = None
+            except discord.Forbidden:
+                print("Verification setup: Cosmopings cannot read message history in the rules channel.")
+                return
+            except discord.HTTPException as e:
+                print(f"Verification setup: could not fetch the saved rules message: {e}")
+                return
+
+        if message is None:
+            try:
+                message = await channel.send(embed=build_rules_embed())
+                state["rules_message_id"] = message.id
+                save_verification_state(state)
+                print(f"Posted Community Rules embed: message {message.id}")
+            except discord.Forbidden:
+                print("Verification setup: Cosmopings needs View Channel, Send Messages, and Embed Links permissions.")
+                return
+            except discord.HTTPException as e:
+                print(f"Verification setup: could not post the rules embed: {e}")
+                return
+
+        try:
+            await message.add_reaction(VERIFICATION_EMOJI)
+        except discord.Forbidden:
+            print("Verification setup: Cosmopings needs Add Reactions permission.")
+        except discord.HTTPException as e:
+            print(f"Verification setup: could not add the verification reaction: {e}")
+
+
+@bot.event
+async def on_member_join(member):
+    if member.guild is None:
+        return
+
+    role = member.guild.get_role(NON_VERIFIED_ROLE_ID)
+    if role is None:
+        print(f"Verification: non-verified role {NON_VERIFIED_ROLE_ID} was not found.")
+        return
+
+    try:
+        await member.add_roles(role, reason="New member must accept the community rules.")
+        print(f"Assigned non-verified to {member} ({member.id})")
+    except discord.Forbidden:
+        print("Verification: cannot assign non-verified. Check Manage Roles and role hierarchy.")
+    except discord.HTTPException as e:
+        print(f"Verification: failed to assign non-verified to {member}: {e}")
+
+
+@bot.event
+async def on_raw_reaction_add(payload):
+    if payload.guild_id is None or payload.user_id == bot.user.id:
+        return
+    if payload.channel_id != RULES_CHANNEL_ID or payload.emoji.name != VERIFICATION_EMOJI:
+        return
+
+    state = load_verification_state()
+    if payload.message_id != state.get("rules_message_id"):
+        return
+
+    guild = bot.get_guild(payload.guild_id)
+    if guild is None:
+        return
+
+    member = payload.member
+    if member is None:
+        try:
+            member = await guild.fetch_member(payload.user_id)
+        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+            return
+
+    if member.bot:
+        return
+
+    non_verified_role = guild.get_role(NON_VERIFIED_ROLE_ID)
+    miracle_role = guild.get_role(MIRACLE_ROLE_ID)
+    if miracle_role is None:
+        print(f"Verification: miracle role {MIRACLE_ROLE_ID} was not found.")
+        return
+
+    try:
+        if miracle_role not in member.roles:
+            await member.add_roles(miracle_role, reason="Accepted the community rules.")
+        if non_verified_role is not None and non_verified_role in member.roles:
+            await member.remove_roles(non_verified_role, reason="Member completed rules verification.")
+        print(f"Verified {member} ({member.id}): assigned miracle and removed non-verified.")
+    except discord.Forbidden:
+        print("Verification: cannot update roles. Check Manage Roles and role hierarchy.")
+    except discord.HTTPException as e:
+        print(f"Verification: failed to update roles for {member}: {e}")
+
+
+
 @bot.event
 async def on_ready():
     global uploads_playlist_id
     print(f"Logged in as {bot.user}")
+    await ensure_rules_message()
     try:
         uploads_playlist_id = get_uploads_playlist()
     
