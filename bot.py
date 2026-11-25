@@ -439,8 +439,16 @@ async def on_member_join(member):
     try:
         await member.add_roles(role, reason="New member must accept the community rules.")
         print(f"Assigned non-verified to {member} ({member.id})")
-    except discord.Forbidden:
-        print("Verification: cannot assign non-verified. Check Manage Roles and role hierarchy.")
+    except discord.Forbidden as e:
+        bot_member = member.guild.me
+        print(
+            "Verification Forbidden while assigning non-verified: "
+            f"member={member} ({member.id}), role={role.name} ({role.id}), "
+            f"bot_top_role={bot_member.top_role.name if bot_member else 'unknown'} "
+            f"({bot_member.top_role.id if bot_member else 'unknown'}), "
+            f"status={getattr(e, 'status', 'unknown')}, "
+            f"code={getattr(e, 'code', 'unknown')}, error={e!r}"
+        )
     except discord.HTTPException as e:
         print(f"Verification: failed to assign non-verified to {member}: {e}")
 
@@ -482,8 +490,18 @@ async def on_raw_reaction_add(payload):
         if non_verified_role is not None and non_verified_role in member.roles:
             await member.remove_roles(non_verified_role, reason="Member completed rules verification.")
         print(f"Verified {member} ({member.id}): assigned miracle and removed non-verified.")
-    except discord.Forbidden:
-        print("Verification: cannot update roles. Check Manage Roles and role hierarchy.")
+    except discord.Forbidden as e:
+        bot_member = guild.me
+        print(
+            "Verification Forbidden while updating roles: "
+            f"member={member} ({member.id}), "
+            f"non_verified_role={non_verified_role.id if non_verified_role else 'missing'}, "
+            f"miracle_role={miracle_role.id}, "
+            f"bot_top_role={bot_member.top_role.name if bot_member else 'unknown'} "
+            f"({bot_member.top_role.id if bot_member else 'unknown'}), "
+            f"status={getattr(e, 'status', 'unknown')}, "
+            f"code={getattr(e, 'code', 'unknown')}, error={e!r}"
+        )
     except discord.HTTPException as e:
         print(f"Verification: failed to update roles for {member}: {e}")
 
