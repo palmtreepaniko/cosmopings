@@ -295,14 +295,23 @@ async def check_scheduled_start():
             channel_id = item.get("channel_id", LIVE_CHANNEL_ID)
             notified = item.get("notified", False)
 
-            if not notified and datetime.now(timezone.utc) >= dt_utc:
+            # If this video was already recorded as announced, never announce it again.
+            # This also repairs older scheduled.json entries that lack a "notified" field.
+            if video_id in posted:
+                if not notified:
+                    item["notified"] = True
+                    print(f"  {video_id}: already recorded in posted.json; skipping duplicate START notification")
+            elif not notified and datetime.now(timezone.utc) >= dt_utc:
                 channel = bot.get_channel(channel_id)
                 if channel:
                     message = f"🎵 MIRA just dropped a new {content_type}! Go check it out~\n https://www.youtube.com/watch?v={video_id}" if content_type == "cover" else f"🔴 MIRA is live right now! Come join her~\n https://www.youtube.com/watch?v={video_id}"
                     await channel.send(message)
                     print(f"START notification sent for {video_id}")
-                item["notified"] = True
-                posted.append(video_id)
+                    item["notified"] = True
+                    posted.append(video_id)
+                    # Save immediately after sending so a restart won't resend it.
+                    save_json("posted.json", posted)
+                    save_json("scheduled.json", scheduled)
 
             updated_scheduled.append(item)
 
