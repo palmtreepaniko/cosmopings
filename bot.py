@@ -331,7 +331,7 @@ def build_rules_embed():
 10. Don't spread hate towards me or my friends/collab partners on any of my platforms. I cherish all of them and wish our community to welcome them with the same warm attitude.
 11. Don't feed my content to AI! I'm strictly against all GEN AI instruments, as they steal from real contentmakers.
 12. Please keep comments, stream chat and server messages in English. We have an international community and I'd love you all to understand each other!
-13. If you have any issues, please tag the mods (you can find their work windows in **Text-mods-team✅**)! Don't DM them or me unless we approach you first!
+13. If you have any issues, please tag the mods (you can find their work windows in <#1456668824085725419>)! Don't DM them or me unless we approach you first!
 14. Don't spam and don't use this server to promote yourself!
 
 To access the server fully, react ✅! Please note that it means you agree to the rules and will take full responsibility for breaching them in the future! That's it, have a nice time and may the stars let us meet again!~ ✨"""
