@@ -436,6 +436,19 @@ async def on_member_join(member):
         print(f"Verification: non-verified role {NON_VERIFIED_ROLE_ID} was not found.")
         return
 
+    bot_member = member.guild.get_member(bot.user.id)
+    print(
+        "Verification diagnostics: "
+        f"guild={member.guild.name} ({member.guild.id}), "
+        f"member_guild={member.guild.id}, role_guild={role.guild.id}, "
+        f"bot_member_found={bot_member is not None}, "
+        f"manage_roles={bot_member.guild_permissions.manage_roles if bot_member else 'unknown'}, "
+        f"bot_top_role={bot_member.top_role.name if bot_member else 'unknown'} "
+        f"({bot_member.top_role.id if bot_member else 'unknown'}), "
+        f"target_role={role.name} ({role.id}), "
+        f"target_role_position={role.position}"
+    )
+
     try:
         await member.add_roles(role, reason="New member must accept the community rules.")
         print(f"Assigned non-verified to {member} ({member.id})")
