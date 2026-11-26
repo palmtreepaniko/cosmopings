@@ -8,7 +8,6 @@ import os
 import re
 import xml.etree.ElementTree as ET
 import urllib.request
-from web_server import start_web
 
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
@@ -601,40 +600,19 @@ async def on_ready():
         check_scheduled_start.start()
 
 async def main():
-    port = int(os.getenv("PORT", 25888))
-    try:
-        await start_web(bot=bot, port=port)
-    except Exception as e:
-        print(f"Failed to start web server on port {port}: {e}")
-
     token = os.getenv("DISCORD_TOKEN")
-    if not token or token.strip() == "" or "your_" in token.lower():
-        print("\n" + "="*60)
-        print("CRITICAL: DISCORD_TOKEN is missing or not set!")
-        print("Go to your bot-hosting.cloud panel -> Startup / Variables tab")
-        print("   and paste your Discord Bot Token into DISCORD_TOKEN.")
-        print("Web server is currently RUNNING on port 25888 (Website is alive!)")
-        print("="*60 + "\n")
-        while True:
-            await asyncio.sleep(3600)
+
+    if not token or not token.strip() or "your_" in token.lower():
+        print("ERROR: DISCORD_TOKEN is missing or not configured.")
+        return
 
     try:
         await bot.start(token)
     except discord.errors.LoginFailure:
-        print("\n" + "="*60)
-        print("CRITICAL: Invalid Discord Bot Token!")
-        print("Your DISCORD_TOKEN was rejected by Discord (401 Unauthorized).")
-        print("   1. Open: https://discord.com/developers/applications")
-        print("   2. Select your Bot -> Click 'Bot' on the left menu -> Click 'Reset Token'")
-        print("   3. Paste the new token into DISCORD_TOKEN in bot-hosting.cloud")
-        print("Web server is still RUNNING on port 25888 (Website is alive!)")
-        print("="*60 + "\n")
-        while True:
-            await asyncio.sleep(3600)
+        print("ERROR: Invalid Discord bot token. Check your DISCORD_TOKEN setting.")
     except Exception as e:
         print(f"Error during bot execution: {e}")
-        while True:
-            await asyncio.sleep(3600)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
