@@ -1,3 +1,2 @@
 discord.py
 google-api-python-client
-pytz
