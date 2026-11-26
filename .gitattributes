@@ -1,5 +1,16 @@
-# Keep GitHub's language statistics focused on the bot's source code.
+# Keep GitHub language statistics focused on the Python bot.
 *.py linguist-detectable=true
+
+# Exclude web and non-source files from language statistics.
+*.html linguist-detectable=false
+*.htm linguist-detectable=false
 *.md linguist-detectable=false
 *.json linguist-detectable=false
+*.txt linguist-detectable=false
+*.yml linguist-detectable=false
+*.yaml linguist-detectable=false
+*.toml linguist-detectable=false
+*.ini linguist-detectable=false
+*.cfg linguist-detectable=false
+*.env linguist-detectable=false
 .gitignore linguist-detectable=false
