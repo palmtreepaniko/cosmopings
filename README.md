@@ -1,4 +1,4 @@
-# 🌌 cosmopings
+# cosmopings
 
 ![Project Status](https://img.shields.io/badge/status-work--in--progress-orange)
 ![Python](https://img.shields.io/badge/Python-3.x-blue)
@@ -11,11 +11,11 @@ cosmopings monitors a YouTube channel and automatically notifies designated Disc
 
 It combines YouTube RSS feeds with the YouTube Data API v3 to identify new content and send contextual Discord announcements.
 
-> 🚧 **Work in Progress:** cosmopings is actively being developed. Features, improvements, and fixes may change over time.
+> **Work in Progress:** cosmopings is actively being developed. Features, improvements, and fixes may change over time.
 
 ---
 
-## ✨ Features
+## Features
 
 - **Dual-Engine Polling** — Combines YouTube RSS feeds with YouTube Data API v3 checks every 5 minutes.
 - **Smart Content Classifier** — Distinguishes covers from livestreams using hashtags (`#miracle_melody`, `#miracle_live`) and keywords.
@@ -26,7 +26,7 @@ It combines YouTube RSS feeds with the YouTube Data API v3 to identify new conte
 - **Persistent Deduplication** — Tracks announced and scheduled videos in JSON files to help prevent duplicate notifications after restarts.
 - **Community Verification** — Assigns a temporary role to new members and grants the verified role when they accept the server rules.
 
-## ⚙️ How It Works
+## How It Works
 
 | YouTube / Discord Event | Bot Behavior |
 |---|---|
@@ -37,7 +37,7 @@ It combines YouTube RSS feeds with the YouTube Data API v3 to identify new conte
 | New member joins | Assigns the non-verified role |
 | Member reacts to the rules | Assigns the verified role and removes the non-verified role |
 
-## 🛠️ Technologies Used
+## Technologies Used
 
 | Technology | Purpose |
 |---|---|
@@ -118,7 +118,7 @@ Replace the example IDs with the IDs from your own Discord server. Enable the ne
 python bot.py
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```text
 cosmopings/
@@ -133,7 +133,7 @@ cosmopings/
 
 The JSON state files are created or updated by the bot while it runs. They may not exist in a fresh clone until the relevant features are used.
 
-## 🗺️ Roadmap
+## Roadmap
 
 - [x] YouTube RSS monitoring
 - [x] YouTube Data API integration
@@ -145,7 +145,7 @@ The JSON state files are created or updated by the bot while it runs. They may n
 - [ ] Further reliability and error-handling improvements
 - [ ] Additional notification and moderation refinements
 
-## 🎯 Project Goal
+## Project Goal
 
 cosmopings was created to automate YouTube content announcements for a Discord community, keeping members informed about new covers, scheduled premieres, and livestreams.
 
