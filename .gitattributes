@@ -1,7 +1,5 @@
-# Keep GitHub language statistics focused on the Python bot.
-*.py linguist-detectable=true
 
-# Exclude web and non-source files from language statistics.
+*.py linguist-detectable=true
 *.html linguist-detectable=false
 *.htm linguist-detectable=false
 *.md linguist-detectable=false
