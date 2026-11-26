@@ -1,93 +1,148 @@
-# Cosmopings
+# cosmopings
 
-A specialized Discord bot that monitors a YouTube channel and automatically notifies designated Discord channels when a new cover or livestream is published.
+![Project Status](https://img.shields.io/badge/status-work--in--progress-orange)
+![Python](https://img.shields.io/badge/Python-3.x-blue)
+![Discord.py](https://img.shields.io/badge/Discord.py-Bot-5865F2)
+![YouTube](https://img.shields.io/badge/YouTube-Data%20API%20v3-red)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-Includes a built-in portfolio and status web dashboard compatible with reverse proxy hosts (such as `bot-hosting.cloud`).
+**An automated Discord bot for YouTube cover and livestream notifications.**
+
+cosmopings is a specialized Discord bot that monitors a YouTube channel and automatically notifies designated Discord channels whenever a new cover, scheduled premiere, or livestream is detected.
+
+Built to keep a community updated without requiring manual announcements, cosmopings combines YouTube RSS feeds and the YouTube Data API v3 to detect new content and deliver contextual Discord notifications.
+
+> **Work in Progress:** cosmopings is actively maintained and developed. Features, improvements, and fixes may be introduced over time.
+
+---
 
 ## Features
-- **Dual-Engine Polling**: Blends fast YouTube RSS feeds with YouTube Data API v3 every 5 minutes to detect new publications without quota waste.
-- **Smart Content Classifier**: Distinguishes covers from gaming/chat streams using hashtags (`#miracle_melody` vs. `#miracle_live`) and keywords.
-- **Dynamic Localized Timestamps**: Posts premiere and scheduled stream announcements with native Discord relative countdowns (`<t:unix:R>`).
-- **Follow-up Live Alerts**: Automatically fires a "it's live now!" notification when a scheduled premiere starts.
-- **Unscheduled Stream Detection**: Catches surprise livestreams in real time.
-- **Spam & Shorts Filter**: Eliminates YouTube Shorts and backlog uploads older than 24h.
-- **Stateful JSON Deduplication**: Avoids duplicate notifications with persistent tracking (`posted.json`, `scheduled.json`).
-- **Embedded Web Server & Portfolio**: Native `aiohttp` web server running on port `25888` (or `PORT` env var) serving a cosmic showcase portfolio, live telemetry API (`/api/status`), and health check (`/health`).
 
-## How it works
-| Event | Behavior |
+- **Dual-Engine Polling** — Combines YouTube RSS feeds with YouTube Data API v3 polling every 5 minutes to detect new publications efficiently.
+- **Smart Content Classifier** — Distinguishes covers from gaming and chatting livestreams using hashtags (`#miracle_melody`, `#miracle_live`) and keywords.
+- **Localized Timestamps** — Uses Discord's native relative timestamps (`<t:unix:R>`) for scheduled premieres and livestream announcements.
+- **Premiere Follow-up Alerts** — Automatically sends an additional notification when a scheduled premiere goes live.
+- **Unscheduled Livestream Detection** — Detects surprise livestreams and notifies the community.
+- **Spam & Shorts Filtering** — Filters out YouTube Shorts and older backlog uploads.
+- **Persistent Deduplication** — Uses JSON files to track previously announced and scheduled content, preventing duplicate notifications across restarts.
+
+## How It Works
+
+| YouTube Event | Discord Behavior |
 |---|---|
-| New cover published | Posted immediately in the covers channel |
+| New cover published | Sends an announcement to the covers channel |
 | Scheduled premiere | Posts an announcement with a countdown |
-| Premiere goes live | Sends a "it's live now" follow-up notification |
-| Unscheduled live | Detected and notified in real time |
+| Premiere goes live | Sends a follow-up live notification |
+| Unscheduled livestream | Detects and announces the stream |
 
----
+## Technologies Used
 
-## Web Server & Keep-Alive (Port 25888)
+| Technology | Purpose |
+|---|---|
+| Python | Main programming language |
+| discord.py | Discord bot functionality |
+| YouTube Data API v3 | YouTube content detection |
+| YouTube RSS | Lightweight publication polling |
+| JSON | Persistent notification tracking |
 
-When hosted on platforms like `bot-hosting.cloud`, the app provides a public HTTPS reverse proxy URL (e.g. `https://2ekkusjbrm.apps.bot-hosting.cloud` mapped to port `25888`).
-
-The bot automatically runs an asynchronous web server inside the event loop:
-- **`GET /`**: Cosmic showcase portfolio website.
-- **`GET /health`**: JSON health check for uptime monitors (e.g., [UptimeRobot](https://uptimerobot.com)) to keep your bot container alive 24/7.
-- **`GET /api/status`**: Live JSON telemetry (ping, uptime, videos tracked, upcoming schedule).
-
----
-
-## Installation & Setup
+## Installation
 
 ### Requirements
+
 - Python 3.8+
 - A Discord bot token
 - A YouTube Data API v3 key
+- Git
 
-### Setup
+### 1. Clone the repository
+
 ```bash
-git clone https://github.com/palmtreepaniko/cosmopings
+git clone https://github.com/palmtreepaniko/cosmopings.git
 cd cosmopings
+```
+
+### 2. Install dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### Environment Variables
-Create a `.env` file or set the following environment variables:
+### 3. Configure environment variables
+
+Create a `.env` file in the project root:
+
 ```env
 DISCORD_TOKEN=your_discord_bot_token
 YOUTUBE_API_KEY=your_youtube_api_key
 PORT=25888
 ```
 
-### Configuration
+**Important:** Never commit your `.env` file or expose your bot token and API key.
+
+### 4. Configure the bot
+
 Edit the constants at the top of `bot.py` to match your target YouTube channel and Discord channels:
+
 ```python
-CHANNEL_ID = "UCA5BfytqBCeMitzfGPo2dTA" # Target YouTube Channel ID
-COVER_CHANNEL_ID = 000000000000000000    # Discord channel ID for covers
-LIVE_CHANNEL_ID  = 000000000000000000    # Discord channel ID for lives
+CHANNEL_ID = "UCA5BfytqBCeMitzfGPo2dTA"
+
+COVER_CHANNEL_ID = 000000000000000000
+LIVE_CHANNEL_ID = 000000000000000000
+
 COVER_KEYWORDS = ["cover"]
-LIVE_KEYWORDS  = ["live", "stream", "livestream"]
+LIVE_KEYWORDS = ["live", "stream", "livestream"]
+
 COVER_HASHTAGS = ["miracle_melody"]
-LIVE_HASHTAGS  = ["miracle_live"]
+LIVE_HASHTAGS = ["miracle_live"]
 ```
 
+Replace the Discord channel ID placeholders with your own channel IDs.
+
 ## Running the Bot
+
+Start the Discord bot:
+
 ```bash
 python bot.py
 ```
 
-To test just the web server locally:
-```bash
-python web_server.py
-```
+## Project Structure
 
-## File Structure
-```
+```text
 cosmopings/
-├── bot.py           # Main Discord bot & scheduler
-├── web_server.py    # aiohttp web server & health endpoints
+│
+├── bot.py             # Main Discord bot and scheduler
+├── web_server.py      # aiohttp web server and health endpoints
+│
 ├── web/
-│   └── index.html   # Cosmic portfolio landing page
-├── posted.json      # Tracks already-notified videos
-├── scheduled.json   # Tracks upcoming scheduled events
-├── requirements.txt # Project dependencies
+│   └── index.html     # Cosmic portfolio landing page
+│
+├── posted.json        # Previously announced content
+├── scheduled.json     # Upcoming scheduled events
+│
+├── requirements.txt   # Python dependencies
+├── .gitignore
 └── README.md
 ```
+
+## Roadmap
+
+- [x] YouTube RSS monitoring
+- [x] YouTube Data API integration
+- [x] Cover and livestream classification
+- [x] Scheduled premiere announcements
+- [x] Live follow-up notifications
+- [x] Duplicate notification prevention
+- [ ] Further reliability and error-handling improvements
+- [ ] Additional monitoring and notification refinements
+
+
+## Project Goal
+
+cosmopings was created to automate YouTube content announcements for a Discord community, making sure members are notified about new covers, scheduled premieres, and livestreams.
+
+The project also explores asynchronous programming, API integration, automated monitoring, and Discord bot development.
+
+---
+
+**Developed by [palmtreepaniko](https://github.com/palmtreepaniko)**
