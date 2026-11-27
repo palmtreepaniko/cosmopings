@@ -47,7 +47,7 @@ It combines YouTube RSS feeds with the YouTube Data API v3 to identify new conte
 | YouTube RSS | Lightweight upload detection |
 | JSON | Persistent notification and verification state |
 
-## 🚀 Installation
+## Installation
 
 ### Requirements
 
